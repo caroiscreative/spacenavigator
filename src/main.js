@@ -117,11 +117,22 @@ const satReticle      = document.getElementById('sat-reticle');
 const satReticleNameEl = document.getElementById('sat-reticle-name');
 
 async function init() {
+  const statusEl = document.getElementById('loading-status');
+  const setStatus = (msg) => { if (statusEl) statusEl.textContent = msg; };
+
   scene = new THREE.Scene();
   scene.background = null; // pure black — stars will be geometry, not background
 
   const container = document.getElementById('canvas-container');
-  const result    = await createRenderer(container);
+
+  setStatus('Initializing renderer...');
+  const RENDERER_TIMEOUT = 20000;
+  const result = await Promise.race([
+    createRenderer(container),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Renderer init timed out. Please refresh.')), RENDERER_TIMEOUT)
+    ),
+  ]);
   renderer        = result.renderer;
   statRenderer.textContent = result.rendererType;
 
@@ -134,14 +145,19 @@ async function init() {
   const ambientLight = new THREE.AmbientLight(0x111133, 0.06);
   scene.add(ambientLight);
 
+  setStatus('Loading star catalog (14 MB)...');
   const hygData = await loadHYG();
 
+  setStatus('Building star field...');
   starField = createStarField(scene, hygData);
 
+  setStatus('Loading constellations...');
   constellations = await createConstellations(scene, hygData.hipMap);
 
+  setStatus('Initializing sun...');
   sunLayer = await createSun(scene);
 
+  setStatus('Loading Earth textures...');
   earthLayer = await createEarth(scene);
 
   atmosphereLayer = createAtmosphere(scene);
@@ -247,6 +263,7 @@ async function init() {
     }
   });
 
+  setStatus('Ready.');
   loading.classList.add('hidden');
   setTimeout(() => loading.style.display = 'none', 900);
 
