@@ -31,7 +31,7 @@ export function createTrail(scene, tle) {
   geometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
   geometry.setAttribute('color',    new THREE.BufferAttribute(colArray, 3));
 
-  const material = new THREE.LineBasicMaterial({
+  const material = new THREE.LineBasicNodeMaterial({
     vertexColors: true,
     blending:     THREE.AdditiveBlending,
     depthWrite:   false,

@@ -35,7 +35,7 @@ export async function createSun(scene) {
   const baseTex = createSunGradientTexture();
 
   const sunGeo = new THREE.SphereGeometry(SUN_RADIUS, 48, 48);
-  const sunMat = new THREE.MeshBasicMaterial({
+  const sunMat = new THREE.MeshBasicNodeMaterial({
     map:   baseTex,
     color: new THREE.Color(1.0, 0.97, 0.88),
   });
@@ -93,7 +93,7 @@ export async function createSun(scene) {
   }, SDO_REFRESH_MS);
 
   const holoGeo  = new THREE.SphereGeometry(SUN_REAL_RADIUS, 32, 16);
-  const holoFill = new THREE.MeshBasicMaterial({
+  const holoFill = new THREE.MeshBasicNodeMaterial({
     color:       0xFF8800,
     transparent: true,
     opacity:     0.035,
@@ -107,7 +107,7 @@ export async function createSun(scene) {
   scene.add(holoMesh);
 
   const edgeGeo  = new THREE.EdgesGeometry(new THREE.SphereGeometry(SUN_REAL_RADIUS, 20, 10));
-  const edgeMat  = new THREE.LineBasicMaterial({
+  const edgeMat  = new THREE.LineBasicNodeMaterial({
     color:       0xFF9900,
     transparent: true,
     opacity:     0.14,
@@ -186,7 +186,7 @@ export async function createSun(scene) {
 
 function makeGlowShell(radius, colorHex, opacity, scene, position, name) {
   const geo = new THREE.SphereGeometry(radius, 24, 24);
-  const mat = new THREE.MeshBasicMaterial({
+  const mat = new THREE.MeshBasicNodeMaterial({
     color:       colorHex,
     transparent: true,
     opacity:     opacity,
@@ -241,7 +241,7 @@ function createSunHaloTexture() {
 }
 
 function createSunHaloSprite(scene) {
-  const mat = new THREE.SpriteMaterial({
+  const mat = new THREE.SpriteNodeMaterial({
     map:         createSunHaloTexture(),
     blending:    THREE.AdditiveBlending,
     transparent: true,

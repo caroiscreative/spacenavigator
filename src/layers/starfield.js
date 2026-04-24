@@ -9,7 +9,7 @@ export function createStarField(scene, hygData) {
   geo.setAttribute('color',    new THREE.BufferAttribute(colors,    3));
   geo.setAttribute('size',     new THREE.BufferAttribute(sizes,     1)); // future sizeNode
 
-  const mat = new THREE.PointsMaterial({
+  const mat = new THREE.PointsNodeMaterial({
     vertexColors:    true,
     size:            2.5,            // pixels (sizeAttenuation: false)
     transparent:     true,

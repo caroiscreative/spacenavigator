@@ -36,7 +36,7 @@ export async function createEarth(scene) {
 
   const earthGeo = new THREE.SphereGeometry(EARTH_RADIUS_UNITS, SEGMENTS, SEGMENTS);
 
-  const earthMat = new THREE.MeshStandardMaterial({
+  const earthMat = new THREE.MeshStandardNodeMaterial({
     map:           dayTex,
 
     normalMap:     normalTex,
@@ -59,7 +59,7 @@ export async function createEarth(scene) {
 
   const cloudGeo = new THREE.SphereGeometry(EARTH_RADIUS_UNITS * 1.003, SEGMENTS, SEGMENTS);
 
-  const cloudMat = new THREE.MeshStandardMaterial({
+  const cloudMat = new THREE.MeshStandardNodeMaterial({
     map:          cloudsTex,
     alphaMap:     cloudsTex,   // white clouds opaque, black sky transparent
     transparent:  true,

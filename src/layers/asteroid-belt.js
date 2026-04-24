@@ -25,7 +25,7 @@ export function createAsteroidBelt(scene, camera) {
   buildColors(colors);
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-  const mat = new THREE.PointsMaterial({
+  const mat = new THREE.PointsNodeMaterial({
     size:         1.8,
     sizeAttenuation: false,   // fixed pixel size, no perspective scaling
     vertexColors: true,

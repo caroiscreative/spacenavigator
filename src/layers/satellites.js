@@ -75,7 +75,7 @@ export function createSatellites(scene, tles) {
   activeGeo.setAttribute('position', new THREE.BufferAttribute(activePosArray, 3));
   activeGeo.setAttribute('color',    new THREE.BufferAttribute(activeColorArray, 3));
 
-  const activeMat = new THREE.PointsMaterial({
+  const activeMat = new THREE.PointsNodeMaterial({
     vertexColors:    true,
     size:            2.5,
     transparent:     true,
@@ -105,7 +105,7 @@ export function createSatellites(scene, tles) {
   debrisGeo.setAttribute('position', new THREE.BufferAttribute(debrisPosArray, 3));
   debrisGeo.setAttribute('color',    new THREE.BufferAttribute(debrisColorArray, 3));
 
-  const debrisMat = new THREE.PointsMaterial({
+  const debrisMat = new THREE.PointsNodeMaterial({
     vertexColors:    true,
     size:            1.5,            // slightly smaller than active satellites
     transparent:     true,
@@ -125,7 +125,7 @@ export function createSatellites(scene, tles) {
   const hlGeometry      = new THREE.BufferGeometry();
   hlGeometry.setAttribute('position', new THREE.BufferAttribute(hlPositionArray, 3));
 
-  const hlMaterial = new THREE.PointsMaterial({
+  const hlMaterial = new THREE.PointsNodeMaterial({
     color:           0xFFD700,
     size:            8,
     transparent:     true,
@@ -146,7 +146,7 @@ export function createSatellites(scene, tles) {
   const hvGeometry      = new THREE.BufferGeometry();
   hvGeometry.setAttribute('position', new THREE.BufferAttribute(hvPositionArray, 3));
 
-  const hvMaterial = new THREE.PointsMaterial({
+  const hvMaterial = new THREE.PointsNodeMaterial({
     color:           0x00E5FF,
     size:            5,
     transparent:     true,

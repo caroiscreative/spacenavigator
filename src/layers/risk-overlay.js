@@ -38,7 +38,7 @@ export function createRiskOverlay(scene, satelliteLayer) {
     geo.setAttribute('position', pa);
     geo.setAttribute('color',    ca);
     geo.setDrawRange(0, 0);
-    const mat = new THREE.LineBasicMaterial({
+    const mat = new THREE.LineBasicNodeMaterial({
       vertexColors: true, transparent: true, opacity,
       blending: THREE.AdditiveBlending, depthWrite: false, depthTest,
     });
@@ -55,7 +55,7 @@ export function createRiskOverlay(scene, satelliteLayer) {
     pa.setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('position', pa);
     geo.setDrawRange(0, 0);
-    const mat = new THREE.PointsMaterial({
+    const mat = new THREE.PointsNodeMaterial({
       color, size, sizeAttenuation: false, transparent: true, opacity: 1.0,
       blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
     });
@@ -78,7 +78,7 @@ export function createRiskOverlay(scene, satelliteLayer) {
     geo.setAttribute('position', pa);
     geo.setAttribute('color',    ca);   // BufferAttribute, not the raw Float32Array
     geo.setDrawRange(0, 0);
-    const mat = new THREE.PointsMaterial({
+    const mat = new THREE.PointsNodeMaterial({
       vertexColors: true, size: 6, sizeAttenuation: false,
       transparent: true, opacity: 1.0,
       blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,

@@ -31,7 +31,7 @@ export function createDebrisDensity(scene, tles) {
   const hitMeshes   = [];   // invisible solid spheres for raycasting
   const binData     = [];   // parallel metadata for tooltip + selection
 
-  const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+  const hitMat = new THREE.MeshBasicNodeMaterial({ visible: false });
 
   for (const bin of bins) {
     const t       = bin.count / maxCount;
@@ -42,7 +42,7 @@ export function createDebrisDensity(scene, tles) {
 
     const segs = t > 0.7 ? 32 : t > 0.3 ? 24 : 16;
     const geo  = new THREE.SphereGeometry(r, segs, Math.ceil(segs / 2));
-    const mat  = new THREE.MeshBasicMaterial({
+    const mat  = new THREE.MeshBasicNodeMaterial({
       color,
       wireframe:   true,
       transparent: true,

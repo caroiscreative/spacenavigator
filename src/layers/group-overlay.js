@@ -22,7 +22,7 @@ export function createGroupOverlay(scene, groupEntries) {
 
   const NUM_POINTS = Math.max(60, 120 - Math.floor(groupEntries.length * 0.8));
 
-  const material = new THREE.LineBasicMaterial({
+  const material = new THREE.LineBasicNodeMaterial({
     vertexColors: true,
     blending:     THREE.AdditiveBlending,
     depthWrite:   false,

@@ -109,7 +109,7 @@ export function createOrbitRings(scene, tles) {
   geometry.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
   geometry.setAttribute('color',    new THREE.BufferAttribute(colArr, 3));
 
-  const material = new THREE.LineBasicMaterial({
+  const material = new THREE.LineBasicNodeMaterial({
     vertexColors: true,
     transparent:  true,
     opacity:      1.0,

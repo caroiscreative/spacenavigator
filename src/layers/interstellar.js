@@ -154,7 +154,7 @@ function makeLabel(text, color = '#FFFFFF') {
 
   const texture = new THREE.Texture(canvas);
   texture.needsUpdate = true;
-  const material = new THREE.SpriteMaterial({
+  const material = new THREE.SpriteNodeMaterial({
     map:        texture,
     transparent: true,
     depthWrite:  false,
@@ -171,7 +171,7 @@ function makeLabel(text, color = '#FFFFFF') {
 
 function makeDot(radius, hexColor) {
   const geo = new THREE.SphereGeometry(radius, 16, 16);
-  const mat = new THREE.MeshBasicMaterial({
+  const mat = new THREE.MeshBasicNodeMaterial({
     color:     new THREE.Color(hexColor),
     transparent: true,
     depthWrite:  false,
@@ -190,7 +190,7 @@ function makeDot(radius, hexColor) {
   ctx.fillRect(0, 0, 64, 64);
   const haloTex = new THREE.Texture(canvas);
   haloTex.needsUpdate = true;
-  const haloMat = new THREE.SpriteMaterial({
+  const haloMat = new THREE.SpriteNodeMaterial({
     map: haloTex,
     transparent: true,
     depthWrite:  false,
@@ -226,7 +226,7 @@ export function createInterstellarLayer(scene) {
 
     const trailGeo = new THREE.BufferGeometry();
     trailGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const trailMat = new THREE.LineBasicMaterial({
+    const trailMat = new THREE.LineBasicNodeMaterial({
       color:       new THREE.Color(obj.color),
       transparent:  true,
       opacity:      0.55,

@@ -469,7 +469,7 @@ export function createGalaxyLayer(scene) {
 
   const refs = ALL_DSOS.map(dso => {
     const texture  = getDSOTexture(dso);
-    const material = new THREE.SpriteMaterial({
+    const material = new THREE.SpriteNodeMaterial({
       map:          texture,
       transparent:  true,
       opacity:      BASE_OPACITY,

@@ -310,7 +310,7 @@ export function createSolarSystem(scene, camera) {
   moonOrbitRing.group.scale.setScalar(MOON_VISUAL_R / (384400 / 500));
 
   const moonGeo = new THREE.SphereGeometry(MOON_DEF.radius, 32, 32);
-  const moonMat = new THREE.MeshStandardMaterial({
+  const moonMat = new THREE.MeshStandardNodeMaterial({
     color:   MOON_DEF.color,
     emissive: MOON_DEF.emissive,
     roughness: 0.95,
@@ -500,7 +500,7 @@ function buildPlanet(def, scene, sunPos, loader) {
   const segs = def.radius > 50 ? 48 : 24;
   const geo  = new THREE.SphereGeometry(def.radius, segs, segs);
 
-  const mat = new THREE.MeshStandardMaterial({
+  const mat = new THREE.MeshStandardNodeMaterial({
     color:             def.color,
     emissive:          def.emissive,
     emissiveIntensity: 0.3,
@@ -544,7 +544,7 @@ function buildPlanet(def, scene, sunPos, loader) {
       uv.needsUpdate = true;
     }
 
-    const ringMat = new THREE.MeshBasicMaterial({
+    const ringMat = new THREE.MeshBasicNodeMaterial({
       color:       0xffffff,
       side:        THREE.DoubleSide,
       transparent: true,
@@ -616,7 +616,7 @@ function createHaloTexture(hexColor) {
 }
 
 function createHaloSprite(hexColor, scene) {
-  const mat = new THREE.SpriteMaterial({
+  const mat = new THREE.SpriteNodeMaterial({
     map:         createHaloTexture(hexColor),
     blending:    THREE.AdditiveBlending,
     transparent: true,
@@ -644,7 +644,7 @@ function buildOrbitRing(a, planetName, center, scene, inclinationDeg = 0, ascNod
   geo.setAttribute('position', new THREE.BufferAttribute(pts, 3));
 
   const c   = ORBIT_COLORS[planetName] ?? new THREE.Color(0x444444);
-  const mat = new THREE.LineBasicMaterial({
+  const mat = new THREE.LineBasicNodeMaterial({
     color:       c,
     transparent: true,
     opacity:     1.0,

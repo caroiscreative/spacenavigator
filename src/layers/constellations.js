@@ -112,7 +112,7 @@ export async function createConstellations(scene, hipMap) {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
 
-  const mat = new THREE.LineBasicMaterial({
+  const mat = new THREE.LineBasicNodeMaterial({
     color:       0x4488cc,   // cool blue
     transparent: true,
     opacity:     0.28,
@@ -137,7 +137,7 @@ export async function createConstellations(scene, hipMap) {
   hlGeo.setAttribute('position', hlAttr);
   hlGeo.setDrawRange(0, 0);   // draw nothing until a constellation is hovered
 
-  const hlMat = new THREE.LineBasicMaterial({
+  const hlMat = new THREE.LineBasicNodeMaterial({
     color:       0xa8ccee,   // brighter, cooler blue
     transparent: true,
     opacity:     0.85,
