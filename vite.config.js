@@ -69,29 +69,34 @@ export default defineConfig({
     },
   },
   build: {
-    target:      'esnext',   // WebGPU requires modern ES
+    target:      'esnext',
     outDir:      '../dist',
     emptyOutDir: true,
-    sourcemap:             false,    // no source maps in production — halves bundle size
-    chunkSizeWarningLimit: 2500,    // pdfmake bundles its own fonts (~2 MB) — expected
+    sourcemap:             false,
+    chunkSizeWarningLimit: 2500,
+
+    // Prevent Vite from adding <link rel="modulepreload"> for pdfmake chunks.
+    // pdfmake/vfs_fonts uses `this` as `window` (CJS pattern) — it crashes when
+    // the browser evaluates the chunk at page load in strict ES module context.
+    // By filtering preloads, the chunk only executes on actual PDF button click.
+    modulePreload: {
+      resolveDependencies: (url, deps) =>
+        deps.filter(d => !d.includes('pdfmake')),
+    },
 
     rollupOptions: {
       output: {
-        // Split large libraries into cacheable chunks so the browser can
-        // reuse three.js / pdfmake across deploys even when app code changes.
         manualChunks: {
-          'three':    ['three'],
-          'pdfmake':  ['pdfmake/build/pdfmake', 'pdfmake/build/vfs_fonts'],
-          'ephemeris':['ephemeris'],
-          'satellite':['satellite.js'],
+          'three':     ['three'],
+          'ephemeris': ['ephemeris'],
+          'satellite': ['satellite.js'],
+          // pdfmake intentionally excluded — lazy chunk, must not preload
         },
       },
     },
   },
   optimizeDeps: {
-    exclude: ['three'],     // Three.js ESM — don't pre-bundle
-    // pdfmake ships CJS build files — Vite must pre-bundle them for ESM compatibility
-    include: ['pdfmake/build/pdfmake', 'pdfmake/build/vfs_fonts'],
+    exclude: ['three'],
   },
   resolve: {
     // Alias bare 'three' → 'three/webgpu' so that three/addons/* (OrbitControls,
