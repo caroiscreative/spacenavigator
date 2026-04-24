@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SpaceNavigator — Controls Reference</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+    :root {
+      --void:    #000000;
+      --panel:   rgba(4,10,24,0.98);
+      --cyan:    #00d4ff;
+      --teal:    #00ffd4;
+      --amber:   #ffb300;
+      --red:     #ff4455;
+      --green:   #00ff88;
+      --purple:  #ce93d8;
+      --white:   #e8f4fd;
+      --dim:     #4a6070;
+      --sec:     #8aacbc;
+      --border:  rgba(0,212,255,0.18);
+      --font:    'JetBrains Mono', 'SF Mono', 'Courier New', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--void);
+      color: var(--white);
+      font-family: var(--font);
+      font-size: 13px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* Stars background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.35) 0%, transparent 100%),
+        radial-gradient(1px 1px at 60% 15%, rgba(255,255,255,0.25) 0%, transparent 100%),
+        radial-gradient(1px 1px at 80% 60%, rgba(255,255,255,0.20) 0%, transparent 100%),
+        radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,0.30) 0%, transparent 100%),
+        radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.20) 0%, transparent 100%),
+        radial-gradient(2px 2px at 15% 70%, rgba(200,230,255,0.18) 0%, transparent 100%),
+        radial-gradient(1px 1px at 70% 90%, rgba(255,255,255,0.15) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 48px 24px 64px;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────── */
+    .header {
+      text-align: center;
+      margin-bottom: 52px;
+    }
+    .header-eyebrow {
+      font-size: 10px;
+      letter-spacing: 0.35em;
+      color: var(--cyan);
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 10px;
+    }
+    .header-title {
+      font-size: 28px;
+      letter-spacing: 0.12em;
+      color: var(--white);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .header-sub {
+      font-size: 12px;
+      color: var(--sec);
+      letter-spacing: 0.05em;
+    }
+    .header-line {
+      width: 60px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      margin: 18px auto 0;
+    }
+
+    /* ── Grid ────────────────────────────────────────────────────── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    @media (max-width: 720px) { .grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } }
+
+    /* ── Card ────────────────────────────────────────────────────── */
+    .card {
+      background: rgba(4,10,24,0.85);
+      border: 1px solid var(--border);
+      padding: 18px 20px 20px;
+    }
+    .card.wide { grid-column: 1 / -1; }
+
+    .card-title {
+      font-size: 9px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      opacity: 0.65;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(0,212,255,0.10);
+    }
+
+    /* ── Key-value rows ──────────────────────────────────────────── */
+    .rows { display: flex; flex-direction: column; gap: 7px; }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .row-label { color: var(--sec); font-size: 11.5px; flex: 1; }
+    .row-key   { flex-shrink: 0; display: flex; gap: 3px; align-items: center; }
+
+    /* ── Keyboard key cap ────────────────────────────────────────── */
+    .k {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 20px;
+      padding: 0 6px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-bottom-width: 2px;
+      color: var(--white);
+      font-size: 10px;
+      letter-spacing: 0.04em;
+    }
+    .k.cyan   { border-color: rgba(0,212,255,0.40); color: var(--cyan);   background: rgba(0,212,255,0.07); }
+    .k.amber  { border-color: rgba(255,179,0,0.40);  color: var(--amber);  background: rgba(255,179,0,0.07); }
+    .k.red    { border-color: rgba(255,68,85,0.40);   color: var(--red);    background: rgba(255,68,85,0.06); }
+    .k.green  { border-color: rgba(0,255,136,0.35);  color: var(--green);  background: rgba(0,255,136,0.06); }
+    .k.purple { border-color: rgba(206,147,216,0.40); color: var(--purple); background: rgba(206,147,216,0.06); }
+    .k.teal   { border-color: rgba(0,255,212,0.35);  color: var(--teal);   background: rgba(0,255,212,0.06); }
+
+    .plus { color: var(--dim); font-size: 10px; }
+    .note { color: var(--dim); font-size: 10.5px; }
+
+    /* ── Magic combinations ──────────────────────────────────────── */
+    .combo-list { display: flex; flex-direction: column; gap: 16px; }
+    .combo {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .combo-keys {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      flex-shrink: 0;
+      padding-top: 1px;
+      min-width: 80px;
+    }
+    .combo-text { font-size: 11.5px; color: var(--sec); line-height: 1.55; }
+    .combo-text strong { color: var(--white); font-weight: 400; }
+
+    /* ── Footer ──────────────────────────────────────────────────── */
+    .footer {
+      margin-top: 52px;
+      text-align: center;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: var(--dim);
+    }
+    .footer a { color: var(--cyan); text-decoration: none; opacity: 0.7; }
+    .footer a:hover { opacity: 1; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="header-eyebrow">Reference Guide</div>
+    <div class="header-title">SpaceNavigator</div>
+    <div class="header-sub">Real-time 3D space situational awareness — keyboard shortcuts &amp; navigation guide</div>
+    <div class="header-line"></div>
+  </div>
+
+  <div class="grid">
+
+    <!-- NAVIGATE TO ─────────────────────────────────────── -->
+    <div class="card">
+      <div class="card-title">Navigate to</div>
+      <div class="rows">
+        <div class="row"><span class="row-label">Back to Earth</span><span class="row-key"><span class="k amber">E</span></span></div>
+        <div class="row"><span class="row-label">Fly to the Sun</span><span class="row-key"><span class="k amber">S</span></span></div>
+        <div class="row"><span class="row-label">Mercury</span><span class="row-key"><span class="k amber">Q</span></span></div>
+        <div class="row"><span class="row-label">Venus</span><span class="row-key"><span class="k amber">V</span></span></div>
+        <div class="row"><span class="row-label">Mars</span><span class="row-key"><span class="k amber">R</span></span></div>
+        <div class="row"><span class="row-label">Jupiter</span><span class="row-key"><span class="k amber">J</span></span></div>
+        <div class="row"><span class="row-label">Saturn</span><span class="row-key"><span class="k amber">T</span></span></div>
+        <div class="row"><span class="row-label">Uranus</span><span class="row-key"><span class="k amber">U</span></span></div>
+        <div class="row"><span class="row-label">Neptune</span><span class="row-key"><span class="k amber">N</span></span></div>
+        <div class="row"><span class="row-label">Moon</span><span class="row-key"><span class="k amber">M</span></span></div>
+      </div>
+    </div>
+
+    <!-- CAMERA PRESETS ──────────────────────────────────── -->
+    <div class="card">
+      <div class="card-title">Camera zoom presets</div>
+      <div class="rows">
+        <div class="row"><span class="row-label">Low Earth Orbit (200–2000 km)</span><span class="row-key"><span class="k">1</span></span></div>
+        <div class="row"><span class="row-label">Geostationary belt (35,786 km)</span><span class="row-key"><span class="k">2</span></span></div>
+        <div class="row"><span class="row-label">Cislunar space (Earth + Moon)</span><span class="row-key"><span class="k">3</span></span></div>
+        <div class="row"><span class="row-label">Inner Solar System</span><span class="row-key"><span class="k">4</span></span></div>
+        <div class="row"><span class="row-label">Star sphere</span><span class="row-key"><span class="k">5</span></span></div>
+        <div class="row"><span class="row-label">Outer Solar System</span><span class="row-key"><span class="k">6</span></span></div>
+      </div>
+    </div>
+
+    <!-- SCENE LAYERS ───────────────────────────────────── -->
+    <div class="card">
+      <div class="card-title">Scene · layers</div>
+      <div class="rows">
+        <div class="row"><span class="row-label">Star field — 119,625 HYG stars</span><span class="row-key"><span class="k cyan">F</span></span></div>
+        <div class="row"><span class="row-label">Constellation lines — 86 patterns</span><span class="row-key"><span class="k cyan">C</span></span></div>
+        <div class="row"><span class="row-label">Orbit rings — LEO / MEO / GEO</span><span class="row-key"><span class="k cyan">O</span></span></div>
+        <div class="row"><span class="row-label">Active satellites — 27,000+ objects</span><span class="row-key"><span class="k cyan">A</span></span></div>
+        <div class="row"><span class="row-label">Debris layer — rocket bodies + defunct</span><span class="row-key"><span class="k red">D</span></span></div>
+        <div class="row"><span class="row-label">Asteroid belt — 600k+ MPC objects</span><span class="row-key"><span class="k amber">B</span></span></div>
+        <div class="row"><span class="row-label">Interstellar objects (3 known)</span><span class="row-key"><span class="k purple">Y</span></span></div>
+        <div class="row"><span class="row-label">Deep space explorer</span><span class="row-key"><span class="k teal">I</span></span></div>
+      </div>
+    </div>
+
+    <!-- ANALYSIS TOOLS ─────────────────────────────────── -->
+    <div class="card">
+      <div class="card-title">Analysis tools</div>
+      <div class="rows">
+        <div class="row"><span class="row-label">Conjunction risk scanner</span><span class="row-key"><span class="k red">G</span></span></div>
+        <div class="row"><span class="row-label">Space weather dashboard</span><span class="row-key"><span class="k green">W</span></span></div>
+        <div class="row"><span class="row-label">Time controls (scrub ±7 days)</span><span class="row-key"><span class="k">X</span></span></div>
+        <div class="row"><span class="row-label">Orbital density heatmap</span><span class="row-key"><span class="k red">H</span></span></div>
+        <div class="row"><span class="row-label">Generate PDF report</span><span class="row-key"><span class="k green">P</span></span></div>
+        <div class="row"><span class="row-label">Controls guide (this page, in-app)</span><span class="row-key"><span class="k">?</span></span></div>
+        <div class="row"><span class="row-label">Satellite search by name / NORAD</span><span class="row-key"><span class="k">/</span></span></div>
+      </div>
+    </div>
+
+    <!-- TIME + SPEED ────────────────────────────────────── -->
+    <div class="card">
+      <div class="card-title">Time &amp; simulation speed</div>
+      <div class="rows">
+        <div class="row"><span class="row-label">Slow down</span><span class="row-key"><span class="k">[</span></span></div>
+        <div class="row"><span class="row-label">Speed up</span><span class="row-key"><span class="k">]</span></span></div>
+        <div class="row"><span class="row-label">Range</span><span class="row-key note">×1 → ×1,000,000</span></div>
+        <div class="row"><span class="row-label">Open time scrubber</span><span class="row-key"><span class="k">X</span></span></div>
+        <div class="row"><span class="row-label">Jump to conjunction TCA</span><span class="row-key note">Risk panel</span></div>
+        <div class="row"><span class="row-label">Force-refresh TLE data</span><span class="row-key"><span class="k">⇧</span><span class="k">T</span></span></div>
+      </div>
+    </div>
+
+    <!-- INTERACTION ─────────────────────────────────────── -->
+    <div class="card">
+      <div class="card-title">Interaction</div>
+      <div class="rows">
+        <div class="row"><span class="row-label">Select a satellite</span><span class="row-key note">click dot</span></div>
+        <div class="row"><span class="row-label">Select a planet or Moon</span><span class="row-key note">click body</span></div>
+        <div class="row"><span class="row-label">Select a deep-sky object</span><span class="row-key note">click glow</span></div>
+        <div class="row"><span class="row-label">Hover a constellation line</span><span class="row-key note">name appears</span></div>
+        <div class="row"><span class="row-label">Click an orbit ring</span><span class="row-key note">altitude info</span></div>
+        <div class="row"><span class="row-label">Click a density band</span><span class="row-key note">highlights sats</span></div>
+        <div class="row"><span class="row-label">Dismiss / back to Earth</span><span class="row-key"><span class="k amber">E</span></span></div>
+        <div class="row"><span class="row-label">Close any panel</span><span class="row-key note">× button</span></div>
+      </div>
+    </div>
+
+    <!-- MAGIC COMBINATIONS ──────────────────────────────── (full width) -->
+    <div class="card wide">
+      <div class="card-title">✦ Powerful combinations — features that shine together</div>
+      <div class="combo-list">
+        <div class="combo">
+          <div class="combo-keys"><span class="k red">G</span><span class="plus">+</span><span class="k">X</span></div>
+          <div class="combo-text"><strong>Risk + Time Controls:</strong> open the risk panel and click a conjunction event to fly to it — then use the time scrubber to watch the near-miss approach happen in real time at any speed.</div>
+        </div>
+        <div class="combo">
+          <div class="combo-keys"><span class="k red">H</span><span class="plus">+</span><span class="k cyan">A</span></div>
+          <div class="combo-text"><strong>Density Map + Satellites:</strong> enable both layers and click an altitude band in the density panel. Every satellite in that orbital shell gets highlighted — instantly shows what's in the most crowded zones.</div>
+        </div>
+        <div class="combo">
+          <div class="combo-keys"><span class="k red">D</span><span class="plus">+</span><span class="k red">H</span></div>
+          <div class="combo-text"><strong>Debris + Density:</strong> see the red debris layer and the crowding heatmap simultaneously. The most powerful single view of the orbital environment problem.</div>
+        </div>
+        <div class="combo">
+          <div class="combo-keys"><span class="k">4</span><span class="plus">+</span><span class="k amber">B</span></div>
+          <div class="combo-text"><strong>Solar view + Asteroid Belt:</strong> zoom to the inner solar system and enable the belt. 600,000+ asteroids between Mars and Jupiter light up — their real orbital positions computed from MPC elements.</div>
+        </div>
+        <div class="combo">
+          <div class="combo-keys"><span class="k">6</span><span class="plus">+</span><span class="k purple">Y</span></div>
+          <div class="combo-text"><strong>Outer Solar + Interstellar:</strong> zoom to the outer solar system and enable the deep objects layer. ʻOumuamua, Borisov, and 3I/ATLAS appear with their actual hyperbolic trajectories crossing through the solar system.</div>
+        </div>
+        <div class="combo">
+          <div class="combo-keys"><span class="k amber">T</span><span class="plus">+</span><span class="k">X</span></div>
+          <div class="combo-text"><strong>Saturn + Time:</strong> fly to Saturn, enable time controls, and accelerate to ×10,000. Watch Saturn and its moons sweep through their orbits while the ring system catches the light.</div>
+        </div>
+        <div class="combo">
+          <div class="combo-keys"><span class="k">5</span><span class="plus">+</span><span class="k cyan">F</span><span class="plus">+</span><span class="k cyan">C</span></div>
+          <div class="combo-text"><strong>Star sphere + Stars + Constellations:</strong> zoom to the star sphere and enable both the star field and constellation lines for the complete celestial sphere — 119,625 stars with all 86 classical patterns mapped.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /grid -->
+
+  <div class="footer">
+    SpaceNavigator &mdash; real-time 3D space situational awareness
+    &nbsp;·&nbsp;
+    Press <strong style="color:var(--cyan)">?</strong> in-app to see this guide · <a href="/">Return to app</a>
+  </div>
+
+</div>
+</body>
+</html>
