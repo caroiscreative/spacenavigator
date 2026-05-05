@@ -230,6 +230,61 @@ export function initDragManager() {
   });
 }
 
+/**
+ * Register a panel that was created after initDragManager() ran.
+ * Call this once, right after the element has been appended to the DOM.
+ */
+export function registerDynamicPanel(config) {
+  const panel = document.getElementById(config.id);
+  if (!panel) return;
+
+  const toolPositions = loadToolPositions();
+  let cleanupDrag = null;
+
+  function onPanelBecameVisible() {
+    if (cleanupDrag) cleanupDrag();
+    requestAnimationFrame(() => {
+      const isFloat = FLOAT_ONLY_IDS.has(config.id);
+      const isInfo  = INFO_PANEL_IDS.has(config.id);
+
+      if (isFloat) {
+        cleanupDrag = attachDrag(config, panel);
+        return;
+      }
+
+      const saved = sessionDragPos[config.id] ?? toolPositions[config.id];
+
+      if (!isInfo && saved) {
+        detachToFloat(panel, saved.left, saved.top);
+      } else {
+        moveIntoDock(panel);
+      }
+
+      cleanupDrag = attachDrag(config, panel);
+    });
+  }
+
+  function onPanelBecameHidden() {
+    if (INFO_PANEL_IDS.has(config.id)) {
+      delete sessionDragPos[config.id];
+      moveIntoDock(panel);
+    }
+    if (cleanupDrag) { cleanupDrag(); cleanupDrag = null; }
+  }
+
+  const observer = new MutationObserver(() => {
+    if (config.visibleWhen(panel)) {
+      onPanelBecameVisible();
+    } else {
+      onPanelBecameHidden();
+    }
+  });
+
+  observer.observe(panel, { attributes: true, attributeFilter: ['class'] });
+
+  if (config.visibleWhen(panel)) onPanelBecameVisible();
+}
+
 export function resetPanelPosition(id) {
   delete sessionDragPos[id];
   const all = loadToolPositions();

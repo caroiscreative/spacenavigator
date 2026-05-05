@@ -279,7 +279,30 @@ export function createInterstellarLayer(scene) {
     layerGroup.visible = v;
   }
 
-  return { update, setVisible };
+  // Returns scene-space THREE.Vector3 for the given object id at simTimeMs.
+  // Falls back to perihelion (H=0) if outside the active window or on error.
+  function getScenePos(id, simTimeMs) {
+    const ref = refs.find(r => r.obj.id === id);
+    if (!ref) return null;
+    const { obj } = ref;
+    const inWindow = simTimeMs >= obj.winStart && simTimeMs <= obj.winEnd;
+    try {
+      const ecl = inWindow
+        ? eclipticPos(obj, simTimeMs)
+        : eclipticFromH(obj, 0);          // perihelion
+      return eclipticToScene(ecl, sunPos);
+    } catch {
+      return eclipticToScene(eclipticFromH(obj, 0), sunPos);
+    }
+  }
+
+  // Returns the perihelion timestamp (ms) for the given object id.
+  function getPerihelionMs(id) {
+    const ref = refs.find(r => r.obj.id === id);
+    return ref ? jdToMs(ref.obj.tpJD) : null;
+  }
+
+  return { update, setVisible, getScenePos, getPerihelionMs };
 }
 
 export const INTERSTELLAR_DATES = {

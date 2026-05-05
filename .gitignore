@@ -1,6 +1,12 @@
 node_modules/
 dist/
+dist-embed/
 .DS_Store
 *.local
 .env
 .env.*
+.vercel
+
+# Vite dev-server cache files
+vite.config.js.timestamp-*.mjs
+vite.embed.config.js.timestamp-*.mjs

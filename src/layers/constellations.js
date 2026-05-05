@@ -1,7 +1,7 @@
 
 import * as THREE from 'three/webgpu';
 
-const CONSTELLATION_CATALOG = {
+export const CONSTELLATION_CATALOG = {
   AND: { name: 'Andromeda',           origin: 'Ptolemy',              year: '~150 AD', desc: 'The chained princess of Greek myth; contains the Andromeda Galaxy (M31), 2.5 million light-years away.' },
   ANT: { name: 'Antlia',              origin: 'Nicolas de Lacaille',  year: '1756',    desc: 'The air pump; one of 14 southern constellations mapped by Lacaille from the Cape of Good Hope.' },
   APS: { name: 'Apus',                origin: 'Petrus Plancius',      year: '1597',    desc: 'The bird of paradise; introduced by Dutch navigators on their voyages to the East Indies.' },
@@ -209,7 +209,19 @@ export async function createConstellations(scene, hipMap) {
     return info ? { abbr: bestAbbr, ...info } : null;
   }
 
-  return { lines, toggle, isVisible, pick, highlight };
+  // Build centroid map: abbr → normalized THREE.Vector3 (average of all star directions)
+  const centers = new Map();
+  for (const [abbr, stars] of constStars) {
+    if (!stars.length) continue;
+    const avg = new THREE.Vector3();
+    for (const s of stars) avg.add(s);
+    avg.normalize();
+    centers.set(abbr, avg);
+  }
+
+  function getCenters() { return centers; }
+
+  return { lines, toggle, isVisible, pick, highlight, getCenters };
 }
 
 function parseConstellations(text, hipMap) {

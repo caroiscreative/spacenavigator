@@ -23,6 +23,8 @@ import { createConjunctionDetail } from './ui/conjunction-detail.js';
 import { createTimeControls }     from './ui/time-controls.js';
 import { createSpaceWeather }     from './data/space-weather.js';
 import { createWeatherPanel }     from './ui/weather-panel.js';
+import { createSunHealthPanel }   from './ui/sun-health-panel.js';
+import { SUN_VISUAL_RADIUS }      from './layers/sun.js';
 import { createDebrisDensity }    from './layers/debris-density.js';
 import { findNearestToClick, findNearestToPoint } from './ui/raycaster.js';
 import { createSatellitePanel } from './ui/satellite-panel.js';
@@ -30,13 +32,36 @@ import { createPlanetPanel }    from './ui/planet-panel.js';
 import { generateReport }       from './reports/report-generator.js';
 import { createInterstellarLayer } from './layers/interstellar.js';
 import { createHistoryPanel }      from './ui/history-panel.js';
+import { createDebrisArchaeology } from './ui/debris-archaeology.js';
+import { showEventCinema }         from './ui/event-cinema.js';
+import { createConstellationPanel } from './ui/constellation-panel.js';
+import { createStarPanel }          from './ui/star-panel.js';
+import { raDec3D }                  from './utils/sky-math.js';
+import { geodeticToScene, EARTH_RADIUS_UNITS } from './utils/coordinates.js';
 import { createGalaxyLayer }       from './layers/galaxies.js';
 import { createExplorerPanel }     from './ui/explorer-panel.js';
-import { initDragManager }         from './ui/drag-manager.js';
+import { initDragManager, registerDynamicPanel } from './ui/drag-manager.js';
 import * as profiler               from './core/profiler.js';
 import { createMobileControls, isMobile } from './ui/mobile-controls.js';
+import { GALAXIES, NEBULAE, BLACK_HOLES, CLUSTERS, ALL_DSOS } from './data/galaxy-catalog.js';
+import { encodeState, decodeState, writeState } from './utils/url-state.js';
+import { createPowersOfTen } from './ui/powers-of-ten.js';
+import { createOperatorPanel } from './ui/operator-panel.js';
+import { createMissionSandbox } from './ui/mission-sandbox.js';
+import { createUISounds }       from './audio/ui-sounds.js';
+import { computeDragRisk, countRiskLevels }     from './data/drag-forecast.js';
+import { getPopulationAt }                      from './data/history-events.js';
 
+let sounds           = null;   // UI sound engine (Web Audio API)
 let renderer, scene, camera, controls, navigation;
+
+// ── Compact / embed mode ─────────────────────────────────────────────────────
+const COMPACT = new URLSearchParams(location.search).get('mode') === 'compact';
+
+// Module-level nav refs — set inside init(), needed by postMessage API
+let _flyToPlanet = null;
+let _flyToSun    = null;
+let _backToEarth = null;
 let earthLayer       = null;
 let atmosphereLayer  = null;
 let starField        = null;   // { stars, toggle, isVisible }
@@ -56,18 +81,23 @@ let debrisDensity    = null;   // { update, setVisible, toggle, isVisible, pick,
 
 let hudTimeActive      = false;  // time panel toggle
 let hudHeatActive      = false;  // debris heatmap toggle
-let spaceWeather     = null;   // { onUpdate, getData, refresh, dispose }
-let weatherPanel     = null;   // { show, hide, toggle }
+let spaceWeather     = null;   // { onUpdate, getData, getAtTime, refresh, dispose }
+let weatherPanel     = null;   // { show, hide, toggle, renderData }
+let sunHealthPanel   = null;   // { show, hide, toggle, isVisible }
+let _lastWeatherSyncReal = 0;       // real timestamp of last weather→panel sync
+let _lastWeatherSimTime  = null;    // simTime value at last sync (ms)
 let satPanel         = null;
 let planetPanel      = null;
 let explorerPanel    = null;
 let followPlanet     = null;   // THREE.Mesh to follow with camera each frame
+let _conjTrack       = null;   // { idxA, idxB } — track conjunction midpoint each frame
 let search           = null;
 let tleData          = [];
 let frameCount       = 0;
 let lastFpsTime      = performance.now();
 
 let hoveredPlanetMesh = null;  // mesh currently hovered — drives reticle each frame
+let hoveredDso        = null;  // DSO currently hovered — drives dso-reticle each frame
 
 let selectedSatIdx = -1;       // index of currently selected satellite (-1 = none)
 
@@ -88,20 +118,28 @@ let hudWeatherActive  = false;  // weather panel off by default
 let hudRiskActive     = false;  // conjunction risk overlay off by default
 let hudIntlActive     = false;  // interstellar trajectories off by default
 let interstellarLayer = null;   // { update, setVisible }
-let historyPanel      = null;   // { show, hide, toggle, updateSimTime } — kept for updateSimTime
+let historyPanel           = null;   // { show, hide, toggle, updateSimTime } — kept for updateSimTime
+let debrisArchaeologyPanel = null;   // { show(ev), hide, isOpen } — Push 2.5.2
+let constellationPanel     = null;   // { show(abbr, centroid3d, simTime), hide, update(simTime), isVisible }
+let starPanel              = null;   // { show(star, simTime), hide, update(simTime), isVisible }
 let galaxyLayer       = null;   // { pick, showPanel, hidePanel, setVisible, toggle, isVisible }
 let mobileControls    = null;   // { update, updateDate, updateScale, updateSpeed, dispose } | null
+let powersOfTen       = null;   // { start, stop, update, isActive }
+let operatorPanel     = null;   // { show, hide, toggle, isVisible, populate, updateConjunctions }
+let missionSandbox    = null;   // { show, hide, toggle, isVisible, dispose }
+let _initialUrlState  = null;   // decoded URL state captured at init time
 
 const TIME_SPEEDS  = [
   -1_000_000, -100_000, -10_000, -1_000, -100, -10, -1,
   1, 10, 100, 1_000, 10_000, 100_000, 1_000_000,
 ];
-let   speedIndex   = 7;                         // index 7 = 1× forward
+let   speedIndex         = 7;                   // index 7 = 1× forward
+let   _timePaused        = false;               // true = clock frozen (- key)
+let   _pausedSpeedIndex  = 7;                   // speed to restore when unpausing
 let   simTime      = Date.now();                // current simulation timestamp (ms)
 let   lastRealTime = performance.now();         // real-time stamp of last frame
 
 const loading      = document.getElementById('loading');
-const statRenderer = document.getElementById('stat-renderer');
 const statFps      = document.getElementById('stat-fps');
 const statSpeed    = document.getElementById('stat-speed');
 const statDate     = document.getElementById('stat-date');
@@ -134,13 +172,104 @@ async function init() {
     ),
   ]);
   renderer        = result.renderer;
-  statRenderer.textContent = result.rendererType;
+
+  sounds = createUISounds();
+
+  // ── Compact / embed mode bootstrap ─────────────────────────────────────────
+  if (COMPACT) {
+    document.body.dataset.compact = '1';
+
+    // Responsive HUD scaling — update data-compact-size on every resize
+    function _updateCompactSize() {
+      const w = window.innerWidth;
+      document.body.dataset.compactSize = w < 380 ? 'xs' : w < 520 ? 'sm' : 'md';
+    }
+    window.addEventListener('resize', _updateCompactSize, { passive: true });
+    _updateCompactSize();
+  }
+
+  // Prime AudioContext on first user gesture (browser policy requires this).
+  // Also wire global hover sound delegation here so it covers all future DOM.
+  {
+    let _primed = false;
+    const _prime = () => { if (!_primed) { _primed = true; sounds.prime(); } };
+    document.addEventListener('pointerdown', _prime, { once: true });
+    document.addEventListener('keydown',     _prime, { once: true });
+
+    // Hover sounds — delegate via capture so we catch all buttons + rows
+    // even ones added dynamically. Throttled per-element to avoid rapid fire.
+    const _hoverCooldown = new WeakMap();
+    document.addEventListener('mouseover', (e) => {
+      const el = e.target.closest(
+        'button, .op-row, .exp-row, .exp-tab, .exp-group-row, .exp-intl-header, ' +
+        '.rp-item, .op-conj-item, .hp-card, .cap-card, .cd-jump-btn, .tp-btn, ' +
+        '.hud-btn, .hud-tab, .hud-preset-btn, .hud-planet-btn, .hud-speed-btn'
+      );
+      if (!el) return;
+      const last = _hoverCooldown.get(el) ?? 0;
+      const now  = performance.now();
+      if (now - last < 80) return;   // 80ms cooldown prevents rapid-fire
+      _hoverCooldown.set(el, now);
+      sounds?.hover();
+    }, true);
+  }
 
   const cam  = createCamera(renderer);
   camera     = cam.camera;
   controls   = cam.controls;
 
-  navigation = createNavigation(camera, controls);
+  navigation    = createNavigation(camera, controls);
+  powersOfTen   = createPowersOfTen(camera, controls);
+  operatorPanel = createOperatorPanel({
+    onSelectFleet: (noradSet, fleet) => {
+      // Dim all satellites outside the fleet
+      satelliteLayer?.setLaunchGroup(noradSet);
+
+      // Build orbital arcs + per-satellite reticles for a sample of the fleet
+      if (groupOverlay) { groupOverlay.dispose(); groupOverlay = null; }
+      if (tleData.length > 0) {
+        const MAX_ARC_SATS = 60;
+        const groupEntries  = [];
+        for (let i = 0; i < tleData.length && groupEntries.length < MAX_ARC_SATS; i++) {
+          if (noradSet.has(tleData[i].norad)) groupEntries.push({ tle: tleData[i], idx: i });
+        }
+        if (groupEntries.length > 0) {
+          groupOverlay = createGroupOverlay(scene, groupEntries);
+        }
+      }
+
+      // Show sat reticle on the first satellite in the fleet
+      if (satelliteLayer && satReticle) {
+        const positions = satelliteLayer.getPositions();
+        for (let i = 0; i < tleData.length; i++) {
+          if (noradSet.has(tleData[i].norad)) {
+            const tle = tleData[i];
+            const pos = new THREE.Vector3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
+            if (pos.lengthSq() > 0) {
+              satelliteLayer.setSelected(i);
+              selectedSatIdx = i;
+              if (satReticleNameEl) satReticleNameEl.textContent = fleet.label.toUpperCase();
+              satReticle.classList.remove('hidden');
+              break;
+            }
+          }
+        }
+      }
+
+      setHudToggle('btn-operator', true);
+    },
+    onClear: () => {
+      satelliteLayer?.clearLaunchGroup();
+      satelliteLayer?.setSelected(-1);
+      selectedSatIdx = -1;
+      if (satReticle) satReticle.classList.add('hidden');
+      if (groupOverlay) { groupOverlay.dispose(); groupOverlay = null; }
+      setHudToggle('btn-operator', operatorPanel?.isVisible() ?? false);
+    },
+    onSelectConjunction: handleConjunctionSelect,
+  });
+
+  missionSandbox = createMissionSandbox(scene, () => setHudToggle('btn-mission', false));
 
   const ambientLight = new THREE.AmbientLight(0x111133, 0.06);
   scene.add(ambientLight);
@@ -169,8 +298,46 @@ async function init() {
   spaceWeather = createSpaceWeather();
   weatherPanel = createWeatherPanel(spaceWeather);
 
+  sunHealthPanel = createSunHealthPanel({
+    spaceWeather,
+    onViewRealSize: (active) => {
+      if (!sunLayer) return;
+      if (active) {
+        sunLayer.showHologram();
+        flyToSunHologram();
+      } else {
+        sunLayer.hideHologram();
+        flyToSun();   // fly back to close-up view
+      }
+    },
+    onOpenWeather: () => {
+      closeInfoPanels();
+      if (weatherPanel) { weatherPanel.show(); hudWeatherActive = true; setHudToggle('btn-weather', true); }
+    },
+  });
+
+  // Wire drag-risk recompute on every weather update (runs after TLE data is available)
+  spaceWeather.onUpdate(weatherData => {
+    if (!satelliteLayer || !tleData || tleData.length === 0) return;
+    const riskMap    = computeDragRisk(weatherData.kp, tleData);
+    const riskCounts = countRiskLevels(riskMap);
+    satelliteLayer.setDragRisk(riskMap);
+    if (weatherPanel) weatherPanel.updateForecast(weatherData.kpForecast, riskCounts);
+    operatorPanel?.updateWeather(weatherData);
+  });
+
+  // Reset weather panel to LIVE when weather data refreshes
+  spaceWeather.onUpdate(() => {
+    // Force a re-sync so the badge + data stay current after a 15-min refresh
+    _lastWeatherSimTime = null;
+  });
+
   conjDetail = createConjunctionDetail();
-  conjDetail.onClose(() => { if (riskPanel) riskPanel.deselect(); });
+  conjDetail.onClose(() => {
+    if (riskPanel) riskPanel.deselect();
+    _conjTrack = null;
+    if (controls) controls.minDistance = EARTH_RADIUS_UNITS * 1.002;
+  });
 
   timeControls = createTimeControls({
     getTime: () => simTime,
@@ -185,8 +352,24 @@ async function init() {
   interstellarLayer = createInterstellarLayer(scene);
   interstellarLayer.setVisible(false);   // hidden until user presses Y
 
-  historyPanel = createHistoryPanel({
+  debrisArchaeologyPanel = createDebrisArchaeology({
     onJumpToDate: ms => { simTime = ms; },
+    onGotoEvent:  (ev, ms) => _gotoWithCinema(ev, ms),
+  });
+
+  constellationPanel = createConstellationPanel({
+    onClose: () => constellations?.highlight(null),
+  });
+
+  starPanel = createStarPanel({
+    onClose: () => {},
+  });
+
+  historyPanel = createHistoryPanel({
+    onJumpToDate:  ms  => { simTime = ms; },
+    onGotoEvent:   (ev, ms) => _gotoWithCinema(ev, ms),
+    onDebrisEvent: ev  => { debrisArchaeologyPanel.show(ev); },
+    onClose:       ()  => { debrisArchaeologyPanel.hide(); satelliteLayer?.setHistoricalOpacity(1.0); satelliteLayer?.clearHistoricalYear(); },
   });
 
   galaxyLayer = createGalaxyLayer(scene);
@@ -200,7 +383,7 @@ async function init() {
         document.getElementById('sat-reticle')?.classList.add('hidden');
       }
       planetPanel?.hide();
-      sunLayer?.hidePanel();
+      sunHealthPanel?.hide();
       selectedDso = dso;
       galaxyLayer.showPanel(dso);
       flyToDso(dso);
@@ -219,12 +402,13 @@ async function init() {
         positions[idx * 3 + 2],
       );
       planetPanel?.hide();
-      sunLayer?.hidePanel();
+      sunHealthPanel?.hide();
       galaxyLayer?.hidePanel();
       selectedDso = null;
       _dsoReticleEl?.classList.add('hidden');
       satelliteLayer.clearLaunchGroup();
       satelliteLayer.setSelected(idx);
+      sounds?.select();
       satPanel.show(tle, pos);
       if (trailLayer) { trailLayer.dispose(); trailLayer = null; }
       trailLayer = createTrail(scene, tle);
@@ -250,6 +434,30 @@ async function init() {
         satelliteLayer?.clearLaunchGroup();
       }
     },
+    onSelectStar(star) {
+      closeInfoPanels();
+      const dir = raDec3D(star.raDeg, star.decDeg);
+      flyToSkyDir(new THREE.Vector3(dir.x, dir.y, dir.z));
+      starPanel?.show(star, simTime);
+    },
+    onSelectInterstellar(obj) {
+      if (!interstellarLayer) return;
+      // Make the interstellar layer visible if it's hidden
+      if (!hudIntlActive) {
+        hudIntlActive = true;
+        interstellarLayer.setVisible(true);
+        setHudToggle('btn-intl', true);
+      }
+      // Jump to perihelion time so the object dot is visible
+      const periMs = interstellarLayer.getPerihelionMs(obj.id);
+      if (periMs != null) simTime = periMs;
+      // Compute scene position (perihelion) and fly there
+      const pos = interstellarLayer.getScenePos(obj.id, simTime);
+      if (!pos) return;
+      if (controls) controls.minDistance = 10;
+      sounds?.flyTo();
+      navigation.flyToPoint({ x: pos.x, y: pos.y, z: pos.z }, 180);
+    },
     flyTo: (dist) => { if (navigation) navigation.flyTo(dist); },
   });
 
@@ -263,17 +471,33 @@ async function init() {
     }
   });
 
+  window.addEventListener('cap-shell-select', e => {
+    if (!navigation) return;
+    const sh = e.detail;
+    if (!sh) return;
+    const midKm = (sh.minKm + sh.maxKm) / 2;
+    const dist = (6371 + midKm) / 500;
+    navigation.flyTo(dist);
+  });
+
   setStatus('Ready.');
   loading.classList.add('hidden');
   setTimeout(() => loading.style.display = 'none', 900);
 
   initDragManager();
 
+  // Decode URL state once and apply camera + time immediately.
+  _initialUrlState = decodeState();
+  if (_initialUrlState) applyUrlState(_initialUrlState, 'camera');
+
   _dsoReticleEl = document.getElementById('dso-reticle');
 
   profiler.setRenderer(renderer);
 
   animate();
+
+  // Notify parent page (embed loader) that the app is ready
+  _notifyReady();
 
   satPanel = createSatellitePanel(() => tleData);
 
@@ -349,42 +573,43 @@ async function init() {
     animateFlyToPlanet();
   }
 
-  function flyToSun() {
+  function _flyToSunAtDist(orbitDist, dur = 2000) {
     followPlanet = null;
     if (navigation) navigation.clearFocusPlanet();
 
     const sunPos = sunLayer?.sun?.position.clone()
                 ?? new THREE.Vector3(0.75, 0.0, 0.64).normalize().multiplyScalar(650);
 
-    const SUN_REAL_R = 1393;
-    const orbitDist  = Math.round(SUN_REAL_R * 1.4);   // ≈ 1 950 units
-
     const startTarget = controls.target.clone();
     const startPos    = camera.position.clone();
 
     let dirApproach = startPos.clone().sub(sunPos);
-    if (dirApproach.lengthSq() < 0.001) {
-      dirApproach = startPos.clone().normalize();
-    }
+    if (dirApproach.lengthSq() < 0.001) dirApproach.set(0, 0, 1);
     dirApproach.normalize();
     const newCamPos = sunPos.clone().add(dirApproach.multiplyScalar(orbitDist));
 
     const START = performance.now();
-    const DUR   = 3000;   // longer duration — farther travel distance
-
-    function animateFlyToSun() {
-      const t    = Math.min(1.0, (performance.now() - START) / DUR);
+    function animate() {
+      const t    = Math.min(1.0, (performance.now() - START) / dur);
       const ease = 1 - Math.pow(1 - t, 3);
       controls.target.lerpVectors(startTarget, sunPos, ease);
       camera.position.lerpVectors(startPos, newCamPos, ease);
       controls.update();
-      if (t < 1.0) {
-        requestAnimationFrame(animateFlyToSun);
-      } else {
-        if (navigation && sunLayer?.sun) navigation.setFocusPlanet(sunLayer.sun);
-      }
+      if (t < 1.0) requestAnimationFrame(animate);
+      else if (navigation && sunLayer?.sun) navigation.setFocusPlanet(sunLayer.sun);
     }
-    animateFlyToSun();
+    animate();
+  }
+
+  // Close-up view — orbit just outside the visual sun sphere
+  function flyToSun() {
+    _flyToSunAtDist(SUN_VISUAL_RADIUS * 5, 2000);   // ≈ 30 units — fills the viewport
+  }
+
+  // Real-size hologram view — orbit outside the true-scale sphere
+  function flyToSunHologram() {
+    const SUN_REAL_R = 1393;
+    _flyToSunAtDist(Math.round(SUN_REAL_R * 1.4), 3000);  // ≈ 1950 units
   }
 
   function flyToDso(dso) {
@@ -417,6 +642,35 @@ async function init() {
     animateFlyToDso();
   }
 
+  // Fly to look at a sky direction (constellation / cluster) from inside the star sphere.
+  // dir: normalized THREE.Vector3 pointing toward the target in scene space.
+  const SKY_R = 9e4;
+  function flyToSkyDir(dir) {
+    followPlanet = null;
+    if (navigation) navigation.clearFocusPlanet();
+
+    const TARGET_DIST = SKY_R * 0.78;   // point just inside the sky sphere
+    const CAM_DIST    = 4000;           // camera stands 4000 units in front of target
+
+    const newTarget  = dir.clone().multiplyScalar(TARGET_DIST);
+    const newCamPos  = dir.clone().multiplyScalar(TARGET_DIST - CAM_DIST);
+
+    const startTarget = controls.target.clone();
+    const startPos    = camera.position.clone();
+    const START = performance.now();
+    const DUR   = 2200;
+
+    function animateFlyToSky() {
+      const t    = Math.min(1.0, (performance.now() - START) / DUR);
+      const ease = 1 - Math.pow(1 - t, 3);
+      controls.target.lerpVectors(startTarget, newTarget, ease);
+      camera.position.lerpVectors(startPos, newCamPos, ease);
+      controls.update();
+      if (t < 1.0) requestAnimationFrame(animateFlyToSky);
+    }
+    animateFlyToSky();
+  }
+
   function backToEarth() {
     followPlanet = null;   // disengage planet follow
     if (navigation) navigation.clearFocusPlanet();
@@ -425,7 +679,7 @@ async function init() {
     selectedSatIdx = -1;
     satelliteLayer?.setSelected(-1);
     planetPanel?.hide();
-    sunLayer?.hidePanel();
+    sunHealthPanel?.hide();
     selectedDso = null;
     galaxyLayer?.hidePanel();
     _dsoReticleEl?.classList.add('hidden');
@@ -454,6 +708,11 @@ async function init() {
     animateBack();
   }
 
+  // Store nav refs for postMessage API (defined in this closure, needed outside)
+  _flyToPlanet = flyToPlanet;
+  _flyToSun    = flyToSun;
+  _backToEarth = backToEarth;
+
   planetPanel = createPlanetPanel(flyToPlanet, backToEarth);
 
   setupHUD({ backToEarth, flyToSun, flyToPlanet });
@@ -463,7 +722,50 @@ async function init() {
     camera,
     controls,
     renderer.domElement,
-    { backToEarth },
+    {
+      backToEarth,
+      getTleData: () => tleData,
+      onSelectSat(idx) {
+        if (!satelliteLayer) return;
+        const tle = satelliteLayer.getTLE(idx);
+        if (!tle) return;
+        const positions = satelliteLayer.getPositions();
+        const pos = new THREE.Vector3(
+          positions[idx * 3],
+          positions[idx * 3 + 1],
+          positions[idx * 3 + 2],
+        );
+        planetPanel?.hide();
+        sunHealthPanel?.hide();
+        galaxyLayer?.hidePanel();
+        selectedDso = null;
+        _dsoReticleEl?.classList.add('hidden');
+        satelliteLayer.clearLaunchGroup();
+        satelliteLayer.setSelected(idx);
+        satPanel.show(tle, pos);
+        if (trailLayer) { trailLayer.dispose(); trailLayer = null; }
+        trailLayer = createTrail(scene, tle);
+        selectedSatIdx = idx;
+        if (satReticleNameEl) satReticleNameEl.textContent = tle?.name ?? `SAT #${idx}`;
+        if (satReticle) satReticle.classList.remove('hidden');
+      },
+      onSelectGroup(norads) {
+        if (groupOverlay) { groupOverlay.dispose(); groupOverlay = null; }
+        if (norads) {
+          satelliteLayer?.setLaunchGroup(norads);
+          const MAX_ARC_SATS = 60;
+          const groupEntries = [];
+          for (let i = 0; i < tleData.length && groupEntries.length < MAX_ARC_SATS; i++) {
+            if (norads.has(tleData[i].norad)) groupEntries.push({ tle: tleData[i], idx: i });
+          }
+          if (groupEntries.length > 0) {
+            groupOverlay = createGroupOverlay(scene, groupEntries);
+          }
+        } else {
+          satelliteLayer?.clearLaunchGroup();
+        }
+      },
+    },
   );
 
   if (mobileControls) {
@@ -474,18 +776,93 @@ async function init() {
       mobileControls?.updateSpeed(formatSpeedLabel());
     });
 
-    window.addEventListener('mobile-select', () => {
-      const canvas = renderer.domElement;
-      const W = canvas.clientWidth;
-      const H = canvas.clientHeight;
+    // ── Helpers: build info payloads for mobile bottom sheet ──
+    const SCENE_KM = 500.0;   // 1 scene unit = 500 km
+    const EARTH_R  = 6371.0;  // km
 
-      if (debrisDensity && debrisDensity.isVisible()) {
-        const hit = debrisDensity.clickShell({ x: 0, y: 0 }, camera);
-        if (hit) return;
+    function _satAltKm(pos) {
+      const distUnits = pos.length();
+      return Math.round(distUnits * SCENE_KM - EARTH_R);
+    }
+
+    function _tleInclination(tle) {
+      // TLE line2 chars 8-16 = inclination degrees
+      try { return parseFloat(tle.line2?.substring(8, 16)).toFixed(1); } catch { return '—'; }
+    }
+
+    function _tlePeriodMin(tle) {
+      // TLE line2 chars 52-63 = mean motion (rev/day)
+      try {
+        const mm = parseFloat(tle.line2?.substring(52, 63));
+        return mm > 0 ? (1440 / mm).toFixed(1) : '—';
+      } catch { return '—'; }
+    }
+
+    function buildSatInfo(tle, pos) {
+      const alt  = _satAltKm(pos);
+      const inc  = _tleInclination(tle);
+      const per  = _tlePeriodMin(tle);
+      const cat  = (tle.category ?? 'SAT').toUpperCase();
+      return {
+        name: tle.name ?? `SAT #${tle.noradId}`,
+        type: cat,
+        stat: `${alt > 0 ? alt.toLocaleString() : '—'} km`,
+        rows: [
+          { label: 'ALT',    value: `${alt > 0 ? alt.toLocaleString() : '—'} km` },
+          { label: 'INC',    value: `${inc}°` },
+          { label: 'PERIOD', value: `${per} min` },
+          { label: 'NORAD',  value: tle.noradId ?? '—' },
+          { label: 'LAUNCH', value: tle.launchDate ?? tle.epoch?.slice(0,10) ?? '—' },
+        ],
+      };
+    }
+
+    function buildPlanetInfo(def) {
+      const rows = [];
+      if (def.radius_km)       rows.push({ label: 'RADIUS',   value: `${def.radius_km.toLocaleString()} km` });
+      if (def.mass_kg)         rows.push({ label: 'MASS',     value: `${def.mass_kg}` });
+      if (def.moons != null)   rows.push({ label: 'MOONS',    value: `${def.moons}` });
+      if (def.day_hours)       rows.push({ label: 'DAY',      value: `${def.day_hours} h` });
+      if (def.year_days)       rows.push({ label: 'YEAR',     value: `${def.year_days} d` });
+      if (def.avg_temp_c)      rows.push({ label: 'TEMP',     value: `${def.avg_temp_c} °C` });
+      return {
+        name: def.name.toUpperCase(),
+        type: def.type?.toUpperCase() ?? 'BODY',
+        stat: def.distAU ? `${def.distAU.toFixed(2)} AU` : '',
+        rows,
+      };
+    }
+
+    // Tap-select at actual touch coordinates
+    window.addEventListener('mob-tap-select', (e) => {
+      const cvs = renderer.domElement;
+      const W   = cvs.clientWidth;
+      const H   = cvs.clientHeight;
+      const tx  = e.detail?.clientX ?? W / 2;
+      const ty  = e.detail?.clientY ?? H / 2;
+
+      // Off-screen coord = close/deselect signal from info sheet
+      if (tx < -100 || ty < -100) {
+        satelliteLayer?.setSelected(-1);
+        closeInfoPanels();
+        mobileControls?.hideInfo();
+        mobileControls?.updateBodyName('');
+        followPlanet = null;
+        if (navigation) navigation.clearFocusPlanet();
+        if (trailLayer) { trailLayer.dispose(); trailLayer = null; }
+        selectedSatIdx = -1;
+        if (satReticle) satReticle.classList.add('hidden');
+        selectedDso = null;
+        galaxyLayer?.hidePanel();
+        _dsoReticleEl?.classList.add('hidden');
+        return;
       }
 
-      const _mr = new THREE.Raycaster();
-      _mr.setFromCamera(new THREE.Vector2(0, 0), camera);
+      const ndcX =  (tx / W) * 2 - 1;
+      const ndcY = -((ty / H) * 2 - 1);
+      const _mr  = new THREE.Raycaster();
+      _mr.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
+
       if (solarSystem) {
         const meshesData = solarSystem.getMeshes();
         const meshes     = meshesData.map(m => m.mesh);
@@ -494,25 +871,38 @@ async function init() {
         if (hits.length > 0) {
           const hitMesh = hits[0].object;
           if (hitMesh.userData.isSun) {
-            closeInfoPanels(); flyToSun(); sunLayer.showPanel(); return;
+            closeInfoPanels();
+            flyToSun();
+            mobileControls?.showInfo({ name: 'SUN', type: 'STAR', stat: '1 AU',
+              rows: [{ label: 'CLASS', value: 'G2V' }, { label: 'RADIUS', value: '695,700 km' }] });
+            mobileControls?.updateBodyName('SUN');
+            return;
           }
           const def = hitMesh.userData.planetDef;
           if (def) {
             closeInfoPanels();
-            if (planetPanel) planetPanel.show(def, hitMesh);
             flyToPlanet(hitMesh);
+            mobileControls?.showInfo(buildPlanetInfo(def));
+            mobileControls?.updateBodyName(def.name.toUpperCase());
             return;
           }
         }
       }
 
       if (galaxyLayer) {
-        const dso = galaxyLayer.pick(W / 2, H / 2, camera, canvas);
+        const dso = galaxyLayer.pick(tx, ty, camera, cvs);
         if (dso) {
           closeInfoPanels();
           selectedDso = dso;
           galaxyLayer.showPanel(dso);
           flyToDso(dso);
+          mobileControls?.showInfo({
+            name: dso.name.toUpperCase(),
+            type: (dso.type ?? 'DSO').toUpperCase(),
+            stat: dso.distance ?? '',
+            rows: dso.details ?? [],
+          });
+          mobileControls?.updateBodyName(dso.name.toUpperCase());
           const lbl = document.getElementById('dso-reticle-label');
           if (lbl) lbl.textContent = dso.name.toUpperCase();
           return;
@@ -521,12 +911,12 @@ async function init() {
 
       if (satelliteLayer) {
         let idx = findNearestToPoint(
-          W / 2, H / 2,
+          tx, ty,
           camera,
           satelliteLayer.getPositions(),
           satelliteLayer.getCount(),
-          canvas,
-          48,   // slightly wider threshold for touch
+          cvs,
+          52,
         );
         if (idx >= 0) {
           const cat = satelliteLayer.getTLE(idx)?.category;
@@ -542,8 +932,9 @@ async function init() {
           );
           closeInfoPanels();
           satelliteLayer.setSelected(idx);
-          satPanel.show(tle, pos);
           selectedSatIdx = idx;
+          mobileControls?.showInfo(buildSatInfo(tle, pos));
+          mobileControls?.updateBodyName(tle?.name ?? `SAT #${idx}`);
           if (satReticleNameEl) satReticleNameEl.textContent = tle?.name ?? `SAT #${idx}`;
           if (satReticle) satReticle.classList.remove('hidden');
           if (trailLayer) { trailLayer.dispose(); trailLayer = null; }
@@ -551,6 +942,8 @@ async function init() {
         } else {
           satelliteLayer.setSelected(-1);
           closeInfoPanels();
+          mobileControls?.hideInfo();
+          mobileControls?.updateBodyName('');
           followPlanet = null;
           if (navigation) navigation.clearFocusPlanet();
           if (trailLayer) { trailLayer.dispose(); trailLayer = null; }
@@ -561,6 +954,81 @@ async function init() {
           _dsoReticleEl?.classList.add('hidden');
         }
       }
+    });
+
+    // Fly to planet from NAV dropdown or layer panel chips
+    window.addEventListener('mob-fly-planet', (e) => {
+      const name = e.detail?.name ?? '';
+      if (name === 'EARTH') {
+        backToEarth();
+        mobileControls?.hideInfo();
+        mobileControls?.updateBodyName('EARTH');
+        return;
+      }
+      if (!solarSystem) return;
+      const found = solarSystem.getMeshes().find(
+        m => m.def?.name?.toUpperCase() === name
+      );
+      if (found) {
+        closeInfoPanels();
+        flyToPlanet(found.mesh);
+        mobileControls?.showInfo(buildPlanetInfo(found.def));
+        mobileControls?.updateBodyName(name);
+      }
+    });
+
+    // Toggle individual layers from layer panel chips / ORBIT button
+    window.addEventListener('mob-toggle-layer', (e) => {
+      const key = e.detail?.key;
+      switch (key) {
+        case 'stars':          toggleStars();   break;
+        case 'constellations':
+          hudConstActive = !hudConstActive;
+          if (constellations) constellations.toggle();
+          setHudToggle('btn-constellations', hudConstActive);
+          break;
+        case 'orbits':
+          hudOrbitActive = !hudOrbitActive;
+          if (orbitRings) orbitRings.toggle();
+          setHudToggle('btn-orbits', hudOrbitActive);
+          break;
+        case 'heat':           toggleHeat();    break;
+        case 'asteroids':
+          if (asteroidBelt) asteroidBelt.toggle();
+          break;
+        case 'interstellar':   toggleIntl();    break;
+        case 'satellites':     toggleSats();    break;
+        case 'debris':         toggleDebris();  break;
+        case 'risk':           toggleRisk();    break;
+        case 'weather':        toggleWeather(); break;
+        case 'explorer':       toggleExplorer();break;
+      }
+    });
+
+    // View presets from layer panel
+    window.addEventListener('mob-view-preset', (e) => {
+      if (!navigation) return;
+      const VIEW_DISTS = {
+        LEO:   1.15,   // just above LEO shell
+        GEO:   7.5,    // GEO belt
+        LUNAR: 12,     // Moon orbit distance
+        SOLAR: 200,    // inner solar system
+        STARS: 2000,   // stellar neighborhood
+        OUTER: 80,     // outer solar system
+      };
+      const dist = VIEW_DISTS[e.detail?.view];
+      if (dist) navigation.flyTo(dist);
+    });
+
+    // DSO fly-to from mobile explorer drawer
+    window.addEventListener('mob-select-dso', (e) => {
+      const { id, cat } = e.detail ?? {};
+      if (!id) return;
+      let dso = null;
+      if (cat === 'galaxy')    dso = GALAXIES.find(d => d.id === id);
+      if (cat === 'blackhole') dso = BLACK_HOLES.find(d => d.id === id);
+      if (cat === 'nebula')    dso = NEBULAE.find(d => d.id === id);
+      if (dso) flyToDso(dso);
     });
   }
 
@@ -586,6 +1054,28 @@ async function init() {
       if (satReticle) satReticle.classList.remove('hidden');
     },
     (dist) => { if (navigation) navigation.flyTo(dist); },
+    {
+      getSkyObjects: () => ALL_DSOS,
+      onSelectDso: (dso) => {
+        closeInfoPanels();
+        selectedDso = dso;
+        galaxyLayer?.showPanel(dso);
+        flyToDso(dso);
+        const lbl = document.getElementById('dso-reticle-label');
+        if (lbl) lbl.textContent = dso.name.toUpperCase();
+        if (_dsoReticleEl) _dsoReticleEl.classList.remove('hidden');
+      },
+      onSelectConstellation: (abbr) => {
+        if (!constellations) return;
+        closeInfoPanels();
+        const centers = constellations.getCenters();
+        const center = centers.get(abbr);
+        if (!center) return;
+        constellations.highlight(abbr);
+        flyToSkyDir(center);
+        constellationPanel?.show(abbr, center, simTime);
+      },
+    },
   );
 
   const canvas = renderer.domElement;
@@ -622,7 +1112,7 @@ async function init() {
         if (hitMesh.userData.isSun) {
           closeInfoPanels();
           flyToSun();
-          sunLayer.showPanel();
+          sunHealthPanel?.show();
           return;
         }
 
@@ -705,7 +1195,7 @@ async function init() {
     if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
     if (e.key === '/' && !e.ctrlKey && !e.metaKey) {
       e.preventDefault();
-      if (search) search.open();
+      window._openCmdPalette?.();
     }
   });
 
@@ -717,7 +1207,8 @@ async function init() {
 
   window.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.target !== document.body && e.target.tagName !== 'CANVAS') return;
+    const _pt = e.target.tagName;
+    if (_pt === 'INPUT' || _pt === 'TEXTAREA' || e.target.isContentEditable) return;
 
     const key = e.key.toLowerCase();
 
@@ -731,7 +1222,7 @@ async function init() {
       e.preventDefault();
       closeInfoPanels();
       flyToSun();
-      sunLayer?.showPanel();
+      sunHealthPanel?.show();
       return;
     }
 
@@ -743,6 +1234,8 @@ async function init() {
     if (!found) return;
 
     closeInfoPanels();
+    sounds?.info();
+    sounds?.flyTo();
     planetPanel?.show(found.def, found.mesh);
     flyToPlanet(found.mesh);
   });
@@ -754,6 +1247,30 @@ async function init() {
     if (e.key === '[' || e.key === ']') {
       if (e.key === ']') speedIndex = Math.min(speedIndex + 1, TIME_SPEEDS.length - 1);
       if (e.key === '[') speedIndex = Math.max(speedIndex - 1, 0);
+      updateSpeedHUD();
+    }
+    // - = pause time (stop the clock at current simTime)
+    if (e.key === '-') {
+      // Insert speed 0 behaviour: find the +1× slot (index 7) and park just before it
+      // Simplest approach: set a flag-free pause by pointing to a zero slot.
+      // We achieve "frozen" time by setting speedIndex to a value whose TIME_SPEEDS = 0.
+      // Since TIME_SPEEDS has no 0, we toggle a pause flag instead.
+      if (!_timePaused) {
+        _timePaused      = true;
+        _pausedSpeedIndex = speedIndex;
+        speedIndex       = 7;   // 1× — doesn't matter, loop won't advance simTime while paused
+      } else {
+        _timePaused  = false;
+        speedIndex   = _pausedSpeedIndex;
+      }
+      updateSpeedHUD();
+    }
+    // = jump to current real time (now)
+    if (e.key === '=') {
+      simTime      = Date.now();
+      _timePaused  = false;
+      speedIndex   = 7;   // resume at 1×
+      _lastWeatherSimTime = null;   // force weather panel re-sync
       updateSpeedHUD();
     }
     if (e.key === 'f' || e.key === 'F') {
@@ -797,8 +1314,10 @@ async function init() {
     if (e.key === 'i' || e.key === 'I') {
       toggleExplorer();
     }
-    if (e.key === 'p' || e.key === 'P') {
-      triggerReport();
+    if (e.key === 'k' || e.key === 'K') {
+      const open = historyPanel?.toggle();
+      open ? sounds?.open() : sounds?.close();
+      document.getElementById('btn-history')?.classList.toggle('active', !!open);
     }
     if (e.key === '`') {
       profiler.toggle();
@@ -854,10 +1373,19 @@ async function init() {
     if (galaxyLayer) {
       const dso = galaxyLayer.pick(mx, my, camera, canvas);
       if (dso) {
-        hoverTooltip.textContent = `${dso.name}  ·  ${dso.designation}  ·  ${dso.distance.toLocaleString()} ${dso.distUnit}`;
-        hoverTooltip.classList.add('visible');
+        if (dso !== hoveredDso) {
+          hoveredDso = dso;
+          const lbl = document.getElementById('dso-reticle-label');
+          if (lbl) lbl.textContent = dso.name.toUpperCase();
+        }
+        canvas.style.cursor = 'pointer';
         return;
       }
+    }
+    // No DSO under cursor — clear hover reticle (unless one is selected)
+    if (hoveredDso) {
+      hoveredDso = null;
+      if (!selectedDso && _dsoReticleEl) _dsoReticleEl.classList.add('hidden');
     }
 
     {
@@ -974,6 +1502,27 @@ async function init() {
   window.addEventListener('keydown', (e) => {
     const _t = e.target.tagName;
     if (_t === 'INPUT' || _t === 'TEXTAREA' || e.target.isContentEditable) return;
+    if ((e.key === 'l' || e.key === 'L') && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      const visible = operatorPanel?.toggle();
+      visible ? sounds?.open() : sounds?.close();
+      setHudToggle('btn-operator', visible ?? false);
+      return;
+    }
+    if ((e.key === 'z' || e.key === 'Z') && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      const visible = missionSandbox?.toggle();
+      setHudToggle('btn-mission', visible ?? false);
+      return;
+    }
+    if ((e.key === 'p' || e.key === 'P') && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      if (powersOfTen?.isActive()) { powersOfTen.stop(); }
+      else { closeInfoPanels(); powersOfTen?.start(); }
+    }
+    if (e.key === 'Escape' && powersOfTen?.isActive()) {
+      powersOfTen.stop();
+    }
     if (e.key === 'T' && e.shiftKey) {
       updatePhaseHUD('TLE — force refresh…');
       if (satelliteLayer) { satelliteLayer.dispose(); satelliteLayer = null; }
@@ -985,6 +1534,7 @@ async function init() {
         if (!hudSatsActive)   satelliteLayer.setVisible(false);
         if (!hudDebrisActive) satelliteLayer.setDebrisVisible(false);
         if (hudOrbitActive)   orbitRings.toggle();   // rings start hidden; toggle if user had them on
+        operatorPanel?.populate(tles);
         updatePhaseHUD(`2.3 — ${tles.length.toLocaleString()} satellites`);
       }).catch(err => {
         updatePhaseHUD('TLE refresh failed');
@@ -1008,6 +1558,8 @@ async function init() {
 
       debrisDensity = createDebrisDensity(scene, tles);
 
+      mobileControls?.updateSatCount(tles.length);
+
       const origUpdate = satelliteLayer.update.bind(satelliteLayer);
       let hudUpdated = false;
       satelliteLayer.update = (now, simT) => {
@@ -1017,6 +1569,20 @@ async function init() {
           updatePhaseHUD(`2.3 — ${tles.length.toLocaleString()} satellites`);
         }
       };
+
+      // Restore TLE-dependent layer toggles from URL state (satellite, debris, orbits, risk…)
+      if (_initialUrlState) applyUrlState(_initialUrlState, 'layers');
+
+      operatorPanel?.populate(tles);
+
+      // Initial drag risk pass — weather may have already emitted before satellites were ready
+      const wd = spaceWeather?.getData();
+      if (wd && wd.kp !== null) {
+        const riskMap    = computeDragRisk(wd.kp, tles);
+        const riskCounts = countRiskLevels(riskMap);
+        satelliteLayer.setDragRisk(riskMap);
+        if (weatherPanel) weatherPanel.updateForecast(wd.kpForecast, riskCounts);
+      }
     })
     .catch(err => {
       console.warn('[SpaceNavigator] TLE fetch failed (offline?):', err.message);
@@ -1041,7 +1607,7 @@ function animate() {
 
   const realDelta = now - lastRealTime;
   lastRealTime    = now;
-  simTime        += realDelta * TIME_SPEEDS[speedIndex];
+  if (!_timePaused) simTime += realDelta * TIME_SPEEDS[speedIndex];
 
   if (Math.floor(now / 1000) !== Math.floor((now - realDelta) / 1000)) {
     const dateStr = formatSimDate(simTime);
@@ -1054,11 +1620,15 @@ function animate() {
   }
 
   profiler.begin('navigation');
-  controls.update();
-  if (navigation) navigation.update();
+  if (powersOfTen?.isActive()) {
+    powersOfTen.update();
+  } else {
+    controls.update();
+    if (navigation) navigation.update();
+  }
   if (mobileControls) {
     mobileControls.update(realDelta);
-    if (statRenderer && Math.floor(now / 2000) !== Math.floor((now - realDelta) / 2000)) {
+    if (Math.floor(now / 2000) !== Math.floor((now - realDelta) / 2000)) {
       const scaleEl = document.getElementById('stat-scale');
       if (scaleEl) mobileControls.updateScale(scaleEl.textContent);
     }
@@ -1085,7 +1655,7 @@ function animate() {
 
   if (satelliteLayer) satelliteLayer.setDebrisVisible(hudDebrisActive);
 
-  const _orbitShouldShow = hudOrbitActive && _earthLayersClose;
+  const _orbitShouldShow = hudOrbitActive;   // always visible when active, no distance culling
   if (orbitRings && !!orbitRings.isVisible() !== _orbitShouldShow) orbitRings.toggle();
 
   if (followPlanet) {
@@ -1097,6 +1667,22 @@ function animate() {
     }
   }
 
+  // Conjunction tracking — camera follows midpoint of the two satellites each frame
+  if (_conjTrack && satelliteLayer) {
+    const _cpos = satelliteLayer.getPositions();
+    const ax = _cpos[_conjTrack.idxA * 3],     ay = _cpos[_conjTrack.idxA * 3 + 1], az = _cpos[_conjTrack.idxA * 3 + 2];
+    const bx = _cpos[_conjTrack.idxB * 3],     by = _cpos[_conjTrack.idxB * 3 + 1], bz = _cpos[_conjTrack.idxB * 3 + 2];
+    if (ax !== 0 || ay !== 0 || az !== 0) {
+      const mx = (ax + bx) * 0.5, my = (ay + by) * 0.5, mz = (az + bz) * 0.5;
+      _followDelta.set(mx, my, mz).sub(controls.target);
+      if (_followDelta.lengthSq() > 1e-10) {
+        controls.target.add(_followDelta);
+        camera.position.add(_followDelta);
+        controls.update();
+      }
+    }
+  }
+
   profiler.begin('asteroids');
   if (asteroidBelt) asteroidBelt.update(simTime);
   profiler.end('asteroids');
@@ -1105,6 +1691,30 @@ function animate() {
 
   if (historyPanel && Math.floor(now / 1000) !== Math.floor((now - realDelta) / 1000)) {
     historyPanel.updateSimTime(simTime);
+    if (satelliteLayer && historyPanel.isOpen()) {
+      satelliteLayer.setHistoricalYear(new Date(simTime).getFullYear());
+    }
+  }
+
+  // Update constellation / star panel Alt/Az live (once per second, only when visible)
+  if (Math.floor(now / 1000) !== Math.floor((now - realDelta) / 1000)) {
+    if (constellationPanel?.isVisible()) constellationPanel.update(simTime);
+    if (starPanel?.isVisible())          starPanel.update(simTime);
+  }
+
+  // ── Weather panel simTime sync ─────────────────────────────────────
+  // Throttle: at most once every 5 real seconds, only if simTime moved >5 min
+  if (weatherPanel && spaceWeather &&
+      hudWeatherActive &&
+      now - _lastWeatherSyncReal > 5_000) {
+    const SIM_THRESH = 5 * 60 * 1000;   // 5 simulated minutes
+    if (_lastWeatherSimTime === null ||
+        Math.abs(simTime - _lastWeatherSimTime) > SIM_THRESH) {
+      const snapshot = spaceWeather.getAtTime(simTime);
+      weatherPanel.renderData(snapshot);
+      _lastWeatherSyncReal = now;
+      _lastWeatherSimTime  = simTime;
+    }
   }
 
   profiler.begin('satellites');
@@ -1118,11 +1728,26 @@ function animate() {
   profiler.begin('risk');
   const _riskShouldShow = hudRiskActive && _earthLayersClose;
   if (riskOverlay) riskOverlay.setVisible(_riskShouldShow);
+
+  // Background scan: keep conjunction data fresh whenever the operator dashboard
+  // is open, regardless of hudRiskActive or camera zoom level.
+  if (riskOverlay && operatorPanel?.isVisible()) {
+    riskOverlay.tickScan(now);
+  }
+
   if (riskOverlay && _earthLayersClose) {
     riskOverlay.update(now);
     if (riskPanel && Math.floor(now / 500) !== Math.floor((now - realDelta) / 500)) {
-      riskPanel.update(riskOverlay.getData());
+      const riskData = riskOverlay.getData();
+      riskPanel.update(riskData);
     }
+  }
+
+  // Feed conjunction data to the operator panel on every half-second tick,
+  // independent of camera zoom (works from any view distance).
+  if (riskOverlay && operatorPanel?.isVisible()
+      && Math.floor(now / 500) !== Math.floor((now - realDelta) / 500)) {
+    operatorPanel.updateConjunctions(riskOverlay.getData()?.conjunctions);
   }
   profiler.end('risk');
 
@@ -1159,8 +1784,15 @@ function animate() {
     }
   }
 
-  if (selectedDso && galaxyLayer) {
-    const pos = galaxyLayer.getDsoScreenPos(selectedDso, camera, renderer.domElement);
+  // DSO reticle — hover takes priority over selection
+  const _activeDso = hoveredDso ?? selectedDso;
+  if (_activeDso && galaxyLayer) {
+    // Update label only when the active DSO changes
+    const lbl = document.getElementById('dso-reticle-label');
+    if (lbl && lbl.textContent !== _activeDso.name.toUpperCase()) {
+      lbl.textContent = _activeDso.name.toUpperCase();
+    }
+    const pos = galaxyLayer.getDsoScreenPos(_activeDso, camera, renderer.domElement);
     if (pos && _dsoReticleEl) {
       _dsoReticleEl.style.left   = pos.x + 'px';
       _dsoReticleEl.style.top    = pos.y + 'px';
@@ -1213,39 +1845,234 @@ function animate() {
   profiler.tick(now);
 }
 
+// ── postMessage API ───────────────────────────────────────────────────────────
+// Handles commands sent from the embed loader script on the parent page.
+// Protocol: { type: 'spacenavigator', action: '...', ...params }
+
+function _postFlyTo(target) {
+  const PLANET_NAMES = {
+    moon: 'Moon', mars: 'Mars', venus: 'Venus', mercury: 'Mercury',
+    jupiter: 'Jupiter', saturn: 'Saturn', uranus: 'Uranus', neptune: 'Neptune',
+  };
+
+  if (target === 'earth') { _backToEarth?.(); return; }
+  if (target === 'sun')   { closeInfoPanels?.(); _flyToSun?.(); sunHealthPanel?.show(); return; }
+
+  // Solar system bodies
+  const planetName = PLANET_NAMES[target];
+  if (planetName && solarSystem) {
+    const found = solarSystem.getMeshes().find(m => m.def.name === planetName);
+    if (found) { closeInfoPanels?.(); sounds?.flyTo(); _flyToPlanet?.(found.mesh); return; }
+  }
+
+  // Named satellites (ISS, etc.)
+  if (target === 'iss' && tleData.length && satelliteLayer) {
+    const idx = tleData.findIndex(t => t.name.includes('ISS') || t.name.includes('ZARYA'));
+    if (idx >= 0) {
+      const pos = satelliteLayer.getPositions();
+      navigation.flyToPoint({ x: pos[idx*3], y: pos[idx*3+1], z: pos[idx*3+2] }, 1.0);
+      sounds?.flyTo();
+      return;
+    }
+  }
+
+  // Camera presets
+  const PRESETS = {
+    leo:      () => document.getElementById('btn-preset-leo')?.click(),
+    geo:      () => document.getElementById('btn-preset-geo')?.click(),
+    lunar:    () => document.getElementById('btn-preset-lunar')?.click(),
+    solar:    () => document.getElementById('btn-preset-solar')?.click(),
+    stars:    () => document.getElementById('btn-preset-stars')?.click(),
+    starlink: () => document.getElementById('btn-preset-leo')?.click(),
+  };
+  PRESETS[target]?.();
+}
+
+function _postToggleLayer(layer, visible) {
+  // Map layer names → { current-state getter, HUD button ID }
+  // We click the button so existing handlers fire (sound, toggle state, etc.)
+  const MAP = {
+    satellites:     { active: () => hudSatsActive,           btn: 'btn-satellites'    },
+    debris:         { active: () => hudDebrisActive,         btn: 'btn-debris'        },
+    risk:           { active: () => hudRiskActive,           btn: 'btn-risk'          },
+    stars:          { active: () => hudStarsActive,          btn: 'btn-starfield'     },
+    orbits:         { active: () => !!orbitRings?.isVisible(), btn: 'btn-orbits'      },
+    constellations: { active: () => hudConstActive,          btn: 'btn-constellations'},
+  };
+  const entry = MAP[layer];
+  if (!entry) return;
+  if (entry.active() !== visible) document.getElementById(entry.btn)?.click();
+}
+
+function _postSetFilter(filter) {
+  if (!satelliteLayer || !tleData.length) return;
+  const FLEET_CATS = {
+    starlink: t => t.category === 'starlink',
+    oneweb:   t => t.category === 'oneweb',
+    debris:   t => t.category === 'debris',
+    station:  t => t.category === 'station',
+    geo:      t => t.category === 'geo',
+    gps:      t => t.name.match(/NAVSTAR|GPS/i),
+    galileo:  t => t.name.includes('GALILEO'),
+    glonass:  t => t.name.includes('GLONASS'),
+    iridium:  t => t.name.includes('IRIDIUM'),
+  };
+  const pred = FLEET_CATS[filter];
+  if (!pred) return;
+  const noradSet = new Set(tleData.filter(pred).map(t => t.norad));
+  satelliteLayer.setLaunchGroup(noradSet);
+}
+
+// Install the postMessage listener once
+window.addEventListener('message', (e) => {
+  if (!e.data || e.data.type !== 'spacenavigator') return;
+  const { action, target, layer, visible, filter } = e.data;
+  switch (action) {
+    case 'flyTo':        _postFlyTo(target);            break;
+    case 'toggleLayer':  _postToggleLayer(layer, visible); break;
+    case 'setFilter':    _postSetFilter(filter);        break;
+    case 'clearFilter':  satelliteLayer?.clearLaunchGroup(); break;
+  }
+});
+
+// Notify the parent page that SpaceNavigator is ready (called at end of init)
+function _notifyReady() {
+  try {
+    window.parent.postMessage({ type: 'spacenavigator', event: 'ready' }, '*');
+  } catch (_) {}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function toggleStars() {
   if (starField) starField.toggle();
   hudStarsActive = !hudStarsActive;
+  sounds?.toggle();
   setHudToggle('btn-starfield', hudStarsActive);
 }
 
 function toggleSats() {
   hudSatsActive = !hudSatsActive;
+  sounds?.toggle();
   setHudToggle('btn-satellites', hudSatsActive);
 }
 
 function toggleDebris() {
   hudDebrisActive = !hudDebrisActive;
+  sounds?.toggle();
   setHudToggle('btn-debris', hudDebrisActive);
 }
 
 function toggleWeather() {
   if (!weatherPanel) return;
   hudWeatherActive = weatherPanel.toggle();
+  sounds?.toggle();
   setHudToggle('btn-weather', hudWeatherActive);
 }
 
 function toggleRisk() {
   hudRiskActive = !hudRiskActive;
   if (riskPanel)   { if (hudRiskActive) riskPanel.show(); else riskPanel.hide(); }
-  if (!hudRiskActive && conjDetail) conjDetail.hide();   // close detail when overlay turns off
+  if (!hudRiskActive && conjDetail) conjDetail.hide();
+  sounds?.toggle();
   setHudToggle('btn-risk', hudRiskActive);
 }
 
 function toggleTime() {
   hudTimeActive = !hudTimeActive;
   if (timeControls) { if (hudTimeActive) timeControls.show(); else timeControls.hide(); }
+  sounds?.toggle();
   setHudToggle('btn-time', hudTimeActive);
+}
+
+/**
+ * Find the satellite closest to a given 3D scene position (world-space search).
+ * Returns the satellite index, or -1 if none found within maxDistSq.
+ */
+function _findNearestSatInRegion(scenePos, maxDistSq = 100.0) {
+  if (!satelliteLayer) return -1;
+  const positions = satelliteLayer.getPositions();
+  const count     = satelliteLayer.getCount();
+  let nearest     = -1;
+  let nearestDist = maxDistSq;
+  for (let i = 0; i < count; i++) {
+    const x = positions[i * 3];
+    const y = positions[i * 3 + 1];
+    const z = positions[i * 3 + 2];
+    if (x === 0 && y === 0 && z === 0) continue;
+    const dx = x - scenePos.x;
+    const dy = y - scenePos.y;
+    const dz = z - scenePos.z;
+    const d  = dx * dx + dy * dy + dz * dz;
+    if (d < nearestDist) { nearestDist = d; nearest = i; }
+  }
+  return nearest;
+}
+
+/**
+ * Cinematic GOTO — plays the event toast and flies the camera to the exact
+ * geographic zone where the event occurred. Jumps simTime on complete/skip.
+ * For events where 3D objects are visible (anim=active), selects the nearest
+ * satellite and shows the yellow reticle.
+ * Used by all GOTO / JUMP TO EVENT buttons across the app.
+ */
+function _gotoWithCinema(ev, ms) {
+  const SCENE_KM = 500.0;
+  const EARTH_R  = 6371.0;
+
+  showEventCinema(ev, {
+    // onReady fires immediately → start camera fly while toast plays
+    onReady: ({ lat, lon, altKm, anim }) => {
+      if (!navigation) return;
+
+      if (!altKm || altKm === 0) {
+        // Deep space / planetary event — pull back to a wide Earth view
+        navigation.flyTo((EARTH_R * 2.8) / SCENE_KM);
+        return;
+      }
+
+      // Camera distance: sit at ~1.25× the event altitude above the surface
+      const dist = (EARTH_R + altKm * 1.25) / SCENE_KM;
+
+      // Orient camera toward the geographic region — keep Earth at orbit center
+      // flyToDir keeps controls.target at (0,0,0) so Earth never drifts out of view
+      const dir = geodeticToScene(lat, lon, 0).normalize();
+      navigation.flyToDir(dir, Math.max(dist, 13.0));
+
+      // If this event has live 3D objects, find + select the nearest satellite
+      // so the yellow reticle appears on a real object in the scene
+      if (anim === 'active' && satelliteLayer && satPanel) {
+        const eventPos = geodeticToScene(lat, lon, altKm);
+        const idx      = _findNearestSatInRegion(eventPos);
+        if (idx !== -1) {
+          const positions = satelliteLayer.getPositions();
+          const tle       = satelliteLayer.getTLE(idx);
+          const pos       = new THREE.Vector3(
+            positions[idx * 3],
+            positions[idx * 3 + 1],
+            positions[idx * 3 + 2],
+          );
+          // Clear any previous selection
+          if (selectedSatIdx !== -1) satelliteLayer.setSelected(-1);
+          planetPanel?.hide();
+          _dsoReticleEl?.classList.add('hidden');
+          // Select and show reticle
+          satelliteLayer.setSelected(idx);
+          satPanel.show(tle, pos);
+          if (trailLayer) { trailLayer.dispose(); trailLayer = null; }
+          trailLayer = createTrail(scene, tle);
+          selectedSatIdx = idx;
+          if (satReticleNameEl) satReticleNameEl.textContent = tle?.name ?? `SAT #${idx}`;
+          if (satReticle) satReticle.classList.remove('hidden');
+        }
+      }
+    },
+
+    // onComplete fires after 7s or on SKIP → apply time jump
+    onComplete: () => {
+      simTime = ms;
+    },
+  });
 }
 
 function toggleHeat() {
@@ -1281,6 +2108,9 @@ function showHeatExplainer(show) {
       </div>
       <div id="heat-explainer-body">
         <div id="heat-summary"></div>
+        <div id="heat-explainer-desc">
+          Each band represents a 200 km altitude slice of near-Earth space. Click a band to highlight those objects in the 3D view — select multiple to compare zones. Color scales from green (sparse) through yellow to red (dense). Use this to spot crowded orbital shells where collision risk is highest.
+        </div>
         <div id="heat-clear-row">
           <button id="heat-clear-btn">CLEAR SELECTION</button>
         </div>
@@ -1288,6 +2118,13 @@ function showHeatExplainer(show) {
       </div>
     `;
     document.body.appendChild(panel);
+
+    // Register with drag manager (panel created after initDragManager ran)
+    registerDynamicPanel({
+      id: 'heat-explainer',
+      handleSel: '#heat-explainer-header',
+      visibleWhen: el => el.classList.contains('visible'),
+    });
 
     document.getElementById('heat-explainer-close').addEventListener('click', () => {
       panel.classList.remove('visible');
@@ -1390,6 +2227,9 @@ function triggerReport() {
 function handleConjunctionSelect(c) {
   if (!satelliteLayer) return;
 
+  if (c.risk === 'critical') sounds?.conjCritical();
+  else                       sounds?.conjWarning();
+
   const pos  = satelliteLayer.getPositions();
   const posA = [pos[c.idxA * 3], pos[c.idxA * 3 + 1], pos[c.idxA * 3 + 2]];
   const posB = [pos[c.idxB * 3], pos[c.idxB * 3 + 1], pos[c.idxB * 3 + 2]];
@@ -1398,7 +2238,15 @@ function handleConjunctionSelect(c) {
   const my = (posA[1] + posB[1]) * 0.5;
   const mz = (posA[2] + posB[2]) * 0.5;
 
+  // Unlock zoom so the user can get close to the satellite pair.
+  // Default minDistance is Earth-surface clamp (~12.7 units) which prevents
+  // zooming in when the orbit target is a LEO midpoint.
+  // 0.05 units = 25 km — close enough to see both objects clearly.
+  if (controls) controls.minDistance = 0.05;
   navigation.flyToPoint({ x: mx, y: my, z: mz }, 1.5);
+
+  // Engage live tracking — camera midpoint follows both satellites each frame
+  _conjTrack = { idxA: c.idxA, idxB: c.idxB };
 
   if (conjDetail) conjDetail.show(c, posA, posB, simTime);
 }
@@ -1407,12 +2255,13 @@ function setupHUD({ backToEarth, flyToSun, flyToPlanet }) {
 
   document.querySelectorAll('.hud-planet-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      btn.blur();   // return focus to body so keyboard shortcuts keep working
       const key = btn.dataset.key;
       if (key === 'e') { backToEarth();                                             return; }
-      if (key === 's') { closeInfoPanels(); flyToSun(); sunLayer?.showPanel();       return; }
+      if (key === 's') { closeInfoPanels(); flyToSun(); sunHealthPanel?.show();       return; }
       const PLANET_MAP = {
-        m: 'Mercury', v: 'Venus', r: 'Mars',
-        j: 'Jupiter', t: 'Saturn', u: 'Uranus', n: 'Neptune', l: 'Moon',
+        q: 'Mercury', v: 'Venus', r: 'Mars',
+        j: 'Jupiter', t: 'Saturn', u: 'Uranus', n: 'Neptune', m: 'Moon',
       };
       const name = PLANET_MAP[key];
       if (!name || !solarSystem) return;
@@ -1426,6 +2275,7 @@ function setupHUD({ backToEarth, flyToSun, flyToPlanet }) {
 
   document.querySelectorAll('.hud-preset-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      btn.blur();
       window.dispatchEvent(new KeyboardEvent('keydown', { key: btn.dataset.key, bubbles: true }));
     });
   });
@@ -1466,6 +2316,10 @@ function setupHUD({ backToEarth, flyToSun, flyToPlanet }) {
 
   document.getElementById('btn-intl')?.addEventListener('click', toggleIntl);
   document.getElementById('btn-explorer')?.addEventListener('click', toggleExplorer);
+  document.getElementById('btn-history')?.addEventListener('click', () => {
+    const open = historyPanel?.toggle();
+    document.getElementById('btn-history')?.classList.toggle('active', !!open);
+  });
 
   document.getElementById('sat-panel-close')?.addEventListener('click', () => {
     selectedSatIdx = -1;
@@ -1478,6 +2332,9 @@ function setupHUD({ backToEarth, flyToSun, flyToPlanet }) {
     hudRiskActive = false;
     if (riskOverlay) riskOverlay.setVisible(false);
     if (riskPanel)   riskPanel.hide();
+    if (conjDetail)  conjDetail.hide();
+    _conjTrack = null;
+    if (controls)    controls.minDistance = EARTH_RADIUS_UNITS * 1.002;
     setHudToggle('btn-risk', false);
   });
   document.getElementById('weather-panel-close')?.addEventListener('click', () => {
@@ -1497,7 +2354,82 @@ function setupHUD({ backToEarth, flyToSun, flyToPlanet }) {
     if (search) search.open();
   });
 
+  document.getElementById('btn-pot')?.addEventListener('click', () => {
+    if (powersOfTen?.isActive()) { powersOfTen.stop(); }
+    else { closeInfoPanels(); powersOfTen?.start(); }
+  });
+
+  document.getElementById('btn-operator')?.addEventListener('click', () => {
+    const visible = operatorPanel?.toggle();
+    visible ? sounds?.open() : sounds?.close();
+    setHudToggle('btn-operator', visible ?? false);
+  });
+
+
+  document.getElementById('btn-mission')?.addEventListener('click', () => {
+    const visible = missionSandbox?.toggle();
+    setHudToggle('btn-mission', visible ?? false);
+  });
+
   document.getElementById('btn-report')?.addEventListener('click', triggerReport);
+
+  document.getElementById('btn-share')?.addEventListener('click', () => {
+    // Build selection snapshot
+    const selection = {};
+
+    // Selected satellite → store by NORAD ID (stable across TLE refreshes)
+    if (selectedSatIdx >= 0 && satelliteLayer) {
+      const tle = satelliteLayer.getTLE(selectedSatIdx);
+      if (tle?.norad) selection.satNorad = tle.norad;
+    }
+
+    // Selected DSO → id + catalog category
+    if (selectedDso) {
+      selection.dsoId = selectedDso.id;
+      if (GALAXIES.some(d => d === selectedDso))    selection.dsoCat = 'galaxy';
+      else if (BLACK_HOLES.some(d => d === selectedDso)) selection.dsoCat = 'blackhole';
+      else if (NEBULAE.some(d => d === selectedDso)) selection.dsoCat = 'nebula';
+    }
+
+    // Selected / followed planet (or Sun)
+    if (followPlanet?.userData?.planetDef) {
+      selection.planet = followPlanet.userData.planetDef.name;
+    } else if (sunHealthPanel?.isVisible()) {
+      selection.planet = 'Sun';
+    }
+
+    // Time controls panel open
+    if (hudTimeActive) selection.timePanel = true;
+
+    const hash = encodeState({
+      camPos:    camera.position,
+      camTarget: controls.target,
+      simTime,
+      speedIndex,
+      layers: {
+        stars:          hudStarsActive,
+        orbits:         hudOrbitActive,
+        constellations: hudConstActive,
+        satellites:     hudSatsActive,
+        debris:         hudDebrisActive,
+        asteroids:      hudAstActive,
+        risk:           hudRiskActive,
+        heat:           hudHeatActive,
+        interstellar:   hudIntlActive,
+        weather:        hudWeatherActive,
+      },
+      selection,
+    });
+    writeState(hash);
+    navigator.clipboard?.writeText(location.href).catch(() => {});
+    const btn = document.getElementById('btn-share');
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = '✓ COPIED';
+      btn.classList.add('active');
+      setTimeout(() => { btn.textContent = orig; btn.classList.remove('active'); }, 1800);
+    }
+  });
 
   document.getElementById('btn-speed-down')?.addEventListener('click', () => {
     speedIndex = Math.max(speedIndex - 1, 0);
@@ -1507,6 +2439,139 @@ function setupHUD({ backToEarth, flyToSun, flyToPlanet }) {
     speedIndex = Math.min(speedIndex + 1, TIME_SPEEDS.length - 1);
     updateSpeedHUD();
   });
+
+  // ── Command palette ──────────────────────────────────────────────
+  const cmdPalette = document.getElementById('cmd-palette');
+  const cmdInput   = document.getElementById('cmd-input');
+  const cmdList    = document.getElementById('cmd-list');
+  const cmdBtn     = document.getElementById('btn-command');
+
+  const PLANET_MAP_CMD = {
+    Mercury: 'q', Venus: 'v', Mars: 'r',
+    Jupiter: 'j', Saturn: 't', Uranus: 'u', Neptune: 'n', Moon: 'm',
+  };
+
+  function cmdFlyToPlanet(name) {
+    const found = solarSystem?.getMeshes().find(m => m.def.name === name);
+    if (!found) return;
+    closeInfoPanels();
+    planetPanel?.show(found.def, found.mesh);
+    flyToPlanet(found.mesh);
+  }
+
+  const CMD_LIST = [
+    { cat: 'nav',    label: 'Earth',            key: 'E', action: () => backToEarth() },
+    { cat: 'nav',    label: 'Sun',               key: 'S', action: () => { closeInfoPanels(); flyToSun(); sunHealthPanel?.show(); } },
+    { cat: 'nav',    label: 'Mercury',           key: 'Q', action: () => cmdFlyToPlanet('Mercury') },
+    { cat: 'nav',    label: 'Venus',             key: 'V', action: () => cmdFlyToPlanet('Venus') },
+    { cat: 'nav',    label: 'Mars',              key: 'R', action: () => cmdFlyToPlanet('Mars') },
+    { cat: 'nav',    label: 'Jupiter',           key: 'J', action: () => cmdFlyToPlanet('Jupiter') },
+    { cat: 'nav',    label: 'Saturn',            key: 'T', action: () => cmdFlyToPlanet('Saturn') },
+    { cat: 'nav',    label: 'Uranus',            key: 'U', action: () => cmdFlyToPlanet('Uranus') },
+    { cat: 'nav',    label: 'Neptune',           key: 'N', action: () => cmdFlyToPlanet('Neptune') },
+    { cat: 'nav',    label: 'Moon',              key: 'M', action: () => cmdFlyToPlanet('Moon') },
+    { cat: 'nav',    label: 'LEO preset',        key: '1', action: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true })) },
+    { cat: 'nav',    label: 'GEO preset',        key: '2', action: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true })) },
+    { cat: 'nav',    label: 'Lunar preset',      key: '3', action: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '3', bubbles: true })) },
+    { cat: 'nav',    label: 'Solar preset',      key: '4', action: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '4', bubbles: true })) },
+    { cat: 'nav',    label: 'Stars preset',      key: '5', action: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '5', bubbles: true })) },
+    { cat: 'nav',    label: 'Outer preset',      key: '6', action: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '6', bubbles: true })) },
+    { cat: 'toggle', label: 'Stars',             key: 'F', action: () => toggleStars() },
+    { cat: 'toggle', label: 'Orbit rings',       key: 'O', action: () => document.getElementById('btn-orbits')?.click() },
+    { cat: 'toggle', label: 'Constellations',    key: 'C', action: () => document.getElementById('btn-constellations')?.click() },
+    { cat: 'toggle', label: 'Satellites',        key: 'A', action: () => toggleSats() },
+    { cat: 'toggle', label: 'Debris',            key: 'D', action: () => toggleDebris() },
+    { cat: 'toggle', label: 'Asteroid belt',     key: 'B', action: () => document.getElementById('btn-asteroids')?.click() },
+    { cat: 'toggle', label: 'Space weather',     key: 'W', action: () => toggleWeather() },
+    { cat: 'toggle', label: 'Conjunction risk',  key: 'G', action: () => toggleRisk() },
+    { cat: 'toggle', label: 'Debris density',    key: 'H', action: () => document.getElementById('btn-heat')?.click() },
+    { cat: 'toggle', label: 'Deep space',        key: 'Y', action: () => toggleIntl() },
+    { cat: 'toggle', label: 'Explorer',          key: 'I', action: () => toggleExplorer() },
+    { cat: 'toggle', label: 'History',           key: 'K', action: () => document.getElementById('btn-history')?.click() },
+    { cat: 'open',   label: 'Fleet Monitor',     key: 'L', action: () => document.getElementById('btn-operator')?.click() },
+    { cat: 'open',   label: 'Mission Sandbox',   key: 'Z', action: () => document.getElementById('btn-mission')?.click() },
+    { cat: 'open',   label: 'Cinematic zoom',    key: 'P', action: () => document.getElementById('btn-pot')?.click() },
+    { cat: 'open',   label: 'Search satellite',  key: '/', action: () => { closeCmdPalette(); search?.open(); } },
+    { cat: 'open',   label: 'Generate report',   key: '',  action: () => { closeCmdPalette(); triggerReport(); } },
+    { cat: 'open',   label: 'Controls guide',    key: '?', action: () => document.getElementById('btn-help')?.click() },
+  ];
+
+  const CAT_CLASS = { nav: 'cmd-cat-nav', toggle: 'cmd-cat-toggle', open: 'cmd-cat-open' };
+  const CAT_LABEL = { nav: 'Navigate', toggle: 'Toggle', open: 'Open' };
+
+  let _cmdOpen = false;
+  let _cmdHi   = 0;
+  let _cmdFiltered = CMD_LIST;
+
+  function openCmdPalette() {
+    if (!cmdPalette) return;
+    _cmdOpen = true;
+    cmdPalette.classList.remove('hidden');
+    cmdBtn?.classList.add('cmd-open');
+    if (cmdInput) { cmdInput.value = ''; cmdInput.focus(); }
+    renderCmdItems('');
+  }
+
+  function closeCmdPalette() {
+    if (!cmdPalette) return;
+    _cmdOpen = false;
+    cmdPalette.classList.add('hidden');
+    cmdBtn?.classList.remove('cmd-open');
+    cmdInput?.blur();
+  }
+
+  function renderCmdItems(q) {
+    const query = q.trim().toLowerCase();
+    _cmdFiltered = query
+      ? CMD_LIST.filter(c =>
+          c.label.toLowerCase().includes(query) ||
+          CAT_LABEL[c.cat].toLowerCase().includes(query) ||
+          c.key.toLowerCase() === query
+        )
+      : CMD_LIST;
+    _cmdHi = 0;
+    buildCmdDOM();
+  }
+
+  function buildCmdDOM() {
+    if (!cmdList) return;
+    cmdList.innerHTML = '';
+    _cmdFiltered.slice(0, 9).forEach((cmd, i) => {
+      const el = document.createElement('div');
+      el.className = 'cmd-item' + (i === _cmdHi ? ' cmd-item--active' : '');
+      el.innerHTML = `<span class="cmd-cat ${CAT_CLASS[cmd.cat]}">${CAT_LABEL[cmd.cat]}</span>`
+                   + `<span class="cmd-label">${cmd.label}</span>`
+                   + (cmd.key ? `<span class="cmd-key">${cmd.key}</span>` : '');
+      el.addEventListener('mousedown', e => { e.preventDefault(); closeCmdPalette(); cmd.action(); });
+      el.addEventListener('mouseover', () => { _cmdHi = i; buildCmdDOM(); });
+      cmdList.appendChild(el);
+    });
+  }
+
+  cmdBtn?.addEventListener('click', () => { _cmdOpen ? closeCmdPalette() : openCmdPalette(); });
+
+  cmdInput?.addEventListener('input',   e => renderCmdItems(e.target.value));
+  cmdInput?.addEventListener('keydown', e => {
+    if (e.key === 'Escape')    { closeCmdPalette(); e.stopPropagation(); return; }
+    if (e.key === 'ArrowDown') { _cmdHi = Math.min(_cmdHi + 1, Math.min(_cmdFiltered.length, 9) - 1); buildCmdDOM(); e.preventDefault(); return; }
+    if (e.key === 'ArrowUp')   { _cmdHi = Math.max(_cmdHi - 1, 0); buildCmdDOM(); e.preventDefault(); return; }
+    if (e.key === 'Enter') {
+      const cmd = _cmdFiltered[_cmdHi];
+      if (cmd) { closeCmdPalette(); cmd.action(); }
+      e.preventDefault(); return;
+    }
+    e.stopPropagation(); // don't let keystrokes trigger HUD shortcuts while typing
+  });
+
+  document.addEventListener('click', e => {
+    if (_cmdOpen && !cmdPalette?.contains(e.target) && e.target?.id !== 'btn-command') {
+      closeCmdPalette();
+    }
+  });
+
+  // expose closeCmdPalette for the "/" keydown handler
+  window._closeCmdPalette = closeCmdPalette;
+  window._openCmdPalette  = openCmdPalette;
 }
 
 function closeInfoPanels() {
@@ -1517,10 +2582,18 @@ function closeInfoPanels() {
     document.getElementById('sat-reticle')?.classList.add('hidden');
   }
   planetPanel?.hide();
-  sunLayer?.hidePanel();
+  sunHealthPanel?.hide();
+  sunLayer?.hideHologram();
   galaxyLayer?.hidePanel();
+  constellationPanel?.hide();
+  constellations?.highlight(null);
+  starPanel?.hide();
   selectedDso = null;
   _dsoReticleEl?.classList.add('hidden');
+  operatorPanel?.hide();
+  setHudToggle('btn-operator', false);
+  missionSandbox?.hide();
+  setHudToggle('btn-mission', false);
 }
 
 function updatePhaseHUD(text) {
@@ -1536,6 +2609,7 @@ function updateSpeedHUD() {
 }
 
 function formatSpeedLabel() {
+  if (_timePaused) return '⏸ PAUSED';
   const speed = TIME_SPEEDS[speedIndex];
   return speed < 0 ? `${speed}×` : `+${speed}×`;
 }
@@ -1543,6 +2617,134 @@ function formatSpeedLabel() {
 function setHudToggle(id, active) {
   const btn = document.getElementById(id);
   if (btn) btn.classList.toggle('active', active);
+  // sync status dot
+  const DOT_MAP = {
+    'btn-starfield':      ['dot-stars',   'dot-cyan'],
+    'btn-satellites':     ['dot-sats',    'dot-cyan'],
+    'btn-debris':         ['dot-debris',  'dot-red'],
+    'btn-risk':           ['dot-risk',    'dot-red'],
+    'btn-orbits':         ['dot-orbits',  'dot-cyan'],
+    'btn-weather':        ['dot-weather', 'dot-green'],
+    'btn-constellations': ['dot-const',   'dot-cyan'],
+    'btn-asteroids':      ['dot-belt',    'dot-amber'],
+  };
+  const entry = DOT_MAP[id];
+  if (entry) {
+    const dot = document.getElementById(entry[0]);
+    if (dot) {
+      dot.classList.remove('dot-cyan', 'dot-red', 'dot-amber', 'dot-green');
+      if (active) dot.classList.add(entry[1]);
+    }
+  }
+}
+
+// Restore view state from a decoded URL state object.
+// phase 'camera' — applies camera + time + speed + non-TLE layers (call at end of init).
+// phase 'layers' — applies TLE-dependent layer toggles (call after fetchTLEs resolves).
+function applyUrlState(state, phase) {
+  if (!state) return;
+
+  if (phase === 'camera') {
+    // ── Camera ──────────────────────────────────────────────────────
+    camera.position.set(state.camPos.x, state.camPos.y, state.camPos.z);
+    controls.target.set(state.camTarget.x, state.camTarget.y, state.camTarget.z);
+    controls.update();
+
+    // ── Time ────────────────────────────────────────────────────────
+    if (state.simTime !== null) simTime = state.simTime;
+    if (state.speedIndex !== null && state.speedIndex >= 0 && state.speedIndex < TIME_SPEEDS.length) {
+      speedIndex = state.speedIndex;
+      updateSpeedHUD();
+    }
+
+    // ── Non-TLE layers ──────────────────────────────────────────────
+    if (state.layers) {
+      const l = state.layers;
+      if (l.stars !== undefined && l.stars !== hudStarsActive) toggleStars();
+      if (l.constellations !== undefined && l.constellations !== hudConstActive) {
+        if (constellations) constellations.toggle();
+        hudConstActive = l.constellations;
+        setHudToggle('btn-constellations', hudConstActive);
+      }
+    }
+
+    // ── Planet / Sun selection ───────────────────────────────────────
+    if (state.planet) {
+      if (state.planet === 'Sun') {
+        sunLayer?.showPanel();
+      } else if (solarSystem) {
+        const found = solarSystem.getMeshes().find(m => m.def.name === state.planet);
+        if (found) {
+          planetPanel?.show(found.def, found.mesh);
+          followPlanet = found.mesh;
+          if (navigation) navigation.setFocusPlanet(found.mesh);
+        }
+      }
+    }
+
+    // ── DSO selection ────────────────────────────────────────────────
+    if (state.dsoId && state.dsoCat && galaxyLayer) {
+      let dso = null;
+      if (state.dsoCat === 'galaxy')    dso = GALAXIES.find(d => d.id === state.dsoId);
+      if (state.dsoCat === 'blackhole') dso = BLACK_HOLES.find(d => d.id === state.dsoId);
+      if (state.dsoCat === 'nebula')    dso = NEBULAE.find(d => d.id === state.dsoId);
+      if (dso) {
+        selectedDso = dso;
+        galaxyLayer.showPanel(dso);
+        const lbl = document.getElementById('dso-reticle-label');
+        if (lbl) lbl.textContent = dso.name.toUpperCase();
+        if (_dsoReticleEl) _dsoReticleEl.classList.remove('hidden');
+      }
+    }
+
+    // ── Time controls panel ──────────────────────────────────────────
+    if (state.timePanel && !hudTimeActive) toggleTime();
+  }
+
+  if (phase === 'layers') {
+    // ── TLE-dependent layer toggles ──────────────────────────────────
+    if (state.layers) {
+      const l = state.layers;
+      if (l.satellites   !== undefined && l.satellites   !== hudSatsActive)   toggleSats();
+      if (l.debris       !== undefined && l.debris       !== hudDebrisActive)  toggleDebris();
+      if (l.asteroids    !== undefined && l.asteroids    !== hudAstActive) {
+        if (asteroidBelt) asteroidBelt.toggle();
+        hudAstActive = l.asteroids;
+        setHudToggle('btn-asteroids', hudAstActive);
+      }
+      if (l.orbits !== undefined && l.orbits !== hudOrbitActive) {
+        if (orbitRings) orbitRings.toggle();
+        hudOrbitActive = l.orbits;
+        setHudToggle('btn-orbits', hudOrbitActive);
+      }
+      if (l.risk         !== undefined && l.risk         !== hudRiskActive)    toggleRisk();
+      if (l.heat         !== undefined && l.heat         !== hudHeatActive)    toggleHeat();
+      if (l.interstellar !== undefined && l.interstellar !== hudIntlActive)    toggleIntl();
+      if (l.weather      !== undefined && l.weather      !== hudWeatherActive) toggleWeather();
+    }
+
+    // ── Satellite selection (needs TLE data + satellite layer) ───────
+    if (state.satNorad != null && satelliteLayer && satPanel) {
+      const idx = tleData.findIndex(t => t.norad === state.satNorad);
+      if (idx >= 0) {
+        const tle       = satelliteLayer.getTLE(idx);
+        const positions = satelliteLayer.getPositions();
+        const pos       = new THREE.Vector3(
+          positions[idx * 3],
+          positions[idx * 3 + 1],
+          positions[idx * 3 + 2],
+        );
+        satelliteLayer.clearLaunchGroup();
+        satelliteLayer.setSelected(idx);
+        satPanel.show(tle, pos);
+        if (trailLayer) { trailLayer.dispose(); trailLayer = null; }
+        trailLayer = createTrail(scene, tle);
+        selectedSatIdx = idx;
+        if (satReticleNameEl) satReticleNameEl.textContent = tle?.name ?? `SAT #${idx}`;
+        if (satReticle) satReticle.classList.remove('hidden');
+      }
+    }
+  }
 }
 
 function formatSimDate(ms) {
@@ -1575,6 +2777,7 @@ const HUD_TIPS = {
   'btn-heat':          { title: 'Orbital Density Map',    key: 'H', desc: 'Heatmap of object crowding by altitude band. Blue = sparse, red = dense. Click any band to highlight satellites in that shell.', combo: 'With <strong>A SATS</strong> + <strong>D DEBRIS</strong> for the complete environment.' },
   'btn-intl':          { title: 'Interstellar Objects',   key: 'Y', desc: 'Real hyperbolic trajectories for the three known interstellar visitors: ʻOumuamua (2017), Borisov (2019), and 3I/ATLAS (2025).', combo: 'With <strong>6 OUTER</strong> view to see them cross the solar system.' },
   'btn-explorer':      { title: 'Deep Space Explorer',    key: 'I', desc: 'Browse galaxies, nebulae, black holes, and interstellar visitors by category. Click any object to fly there.', combo: 'With <strong>F STARS</strong> + <strong>5 STARS</strong> view for full universe perspective.' },
+  'btn-history':       { title: 'Space History Timeline', key: 'K', desc: 'Timeline of key events from Sputnik to today — launches, debris events, discoveries. Click any debris event for an orbital impact analysis.', combo: 'Click <strong>💥 IMPACT</strong> on any debris event to see which altitude shells were affected.' },
   'btn-search':        { title: 'Search',                 key: '/', desc: 'Find any satellite by name or NORAD ID — type "ISS", "Hubble", "Starlink", or any NORAD number. Camera flies to it.' },
   'btn-report':        { title: 'Generate PDF Report',    key: 'P', desc: 'Exports a 2-page orbital risk summary with debris statistics, space weather snapshot, and a screenshot of the current view.', combo: 'Best after activating <strong>G RISK</strong> and <strong>W WEATHER</strong>.' },
   'btn-help':          { title: 'Controls Guide',         key: '?', desc: 'Open the full keyboard shortcuts reference, button guide, and powerful feature combinations.' },
@@ -1625,10 +2828,10 @@ const HUD_TIPS = {
 })();
 
 (function initHelpOverlay() {
-  const overlay    = document.getElementById('help-overlay');
-  const backdrop   = document.getElementById('help-backdrop');
-  const closeBtn   = document.getElementById('help-close-btn');
-  const helpBtn    = document.getElementById('btn-help');
+  const overlay  = document.getElementById('help-overlay');
+  const backdrop = document.getElementById('help-backdrop');
+  const closeBtn = document.getElementById('help-close-btn');
+  const helpBtn  = document.getElementById('btn-help');
   if (!overlay) return;
 
   function openHelp()  { overlay.classList.remove('hidden'); }
@@ -1643,31 +2846,32 @@ const HUD_TIPS = {
     if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeHelp();
   });
 
-  const tabBtnControls = document.getElementById('help-tab-btn-controls');
-  const tabBtnAbout    = document.getElementById('help-tab-btn-about');
-  const tabControls    = document.getElementById('help-tab-controls');
-  const tabAbout       = document.getElementById('help-tab-about');
-
-  function switchTab(active) {
-    const isControls = active === 'controls';
-    tabBtnControls?.classList.toggle('active', isControls);
-    tabBtnAbout?.classList.toggle('active', !isControls);
-    tabControls?.classList.toggle('active', isControls);
-    tabAbout?.classList.toggle('active', !isControls);
-  }
-
-  tabBtnControls?.addEventListener('click', () => switchTab('controls'));
-  tabBtnAbout?.addEventListener('click',    () => switchTab('about'));
-
-  helpBtn?.addEventListener('click', () => switchTab('controls'));
-
   document.getElementById('help-replay-btn')?.addEventListener('click', () => {
     closeHelp();
     setTimeout(() => { window._snReplayOnboarding?.(); }, 150);
   });
+})();
 
-  document.getElementById('help-suggest-btn')?.addEventListener('click', () => {
-    window.open('mailto:francomatacarolina@gmail.com?subject=SpaceNavigator%20Sugerencia', '_blank');
+(function initAboutOverlay() {
+  const overlay   = document.getElementById('about-overlay');
+  const backdrop  = document.getElementById('about-backdrop');
+  const closeBtn  = document.getElementById('about-close-btn');
+  const aboutBtn  = document.getElementById('btn-about');
+  if (!overlay) return;
+
+  function openAbout()  { overlay.classList.remove('hidden'); }
+  function closeAbout() { overlay.classList.add('hidden'); }
+
+  aboutBtn?.addEventListener('click', openAbout);
+  closeBtn?.addEventListener('click', closeAbout);
+  backdrop?.addEventListener('click', closeAbout);
+
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeAbout();
+  });
+
+  document.getElementById('about-suggest-btn')?.addEventListener('click', () => {
+    window.open('mailto:francomatacarolina@gmail.com?subject=SpaceNavigator%20Suggestion', '_blank');
   });
 })();
 

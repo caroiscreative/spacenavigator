@@ -122,7 +122,7 @@ export function tick(now) {
   const fpsColor    = fps >= 55 ? '#81c784' : fps >= 30 ? '#ffb74d' : '#ef5350';
 
   _panel.innerHTML =
-    `<span style="color:#aaa;font-size:10px;letter-spacing:1px">── PERF ──</span>\n` +
+    `<span style="color:#aaa;font-size: 12px;letter-spacing:1px">── PERF ──</span>\n` +
     `  <span style="color:${fpsColor}">FPS  ${fps.toString().padStart(4)}</span>  ` +
     `<span style="color:#aaa">[ ${_bar(frameMs)} ]</span>\n` +
     `  <span style="color:${frameColor}">Frame${_fmt(frameMs)} ms</span>\n` +

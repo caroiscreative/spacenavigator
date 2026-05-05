@@ -1,21 +1,25 @@
 {
-  "buildCommand": "npm run build",
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "vite build && vite build --config vite.embed.config.js --emptyOutDir false && cp dist-embed/spacenavigator-embed.js dist/",
   "outputDirectory": "dist",
-  "framework": "vite",
+  "installCommand": "npm install",
+  "framework": null,
+
   "rewrites": [
     {
-      "source": "/celestrak/NORAD/elements/gp.php",
-      "destination": "/api/celestrak"
+      "source": "/celestrak/:path*",
+      "destination": "/api/celestrak?proxyPath=:path*"
+    },
+    {
+      "source": "/sdo/:path*",
+      "destination": "/api/sdo?proxyPath=:path*"
     },
     {
       "source": "/swpc/:path*",
-      "destination": "https://services.swpc.noaa.gov/:path*"
-    },
-    {
-      "source": "/((?!api|assets|textures|data|favicon).*)",
-      "destination": "/index.html"
+      "destination": "/api/swpc?proxyPath=:path*"
     }
   ],
+
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -24,15 +28,22 @@
       ]
     },
     {
-      "source": "/textures/(.*)",
+      "source": "/spacenavigator-embed.js",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=604800" }
+        { "key": "Cache-Control", "value": "public, max-age=300, must-revalidate" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
       ]
     },
     {
-      "source": "/data/(.*)",
+      "source": "/",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=86400" }
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
     }
   ]

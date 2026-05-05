@@ -6,7 +6,8 @@ const SUN_DISTANCE = 650;
 
 const SUN_DIRECTION = new THREE.Vector3(0.75, 0.0, 0.64).normalize();
 
-const SUN_RADIUS = 6;   // scene units (~3,000 km visual scale)
+export const SUN_VISUAL_RADIUS = 6;   // scene units (~3,000 km visual scale)
+const SUN_RADIUS = SUN_VISUAL_RADIUS;
 
 const DEG = Math.PI / 180;
 
@@ -119,23 +120,17 @@ export async function createSun(scene) {
   edgeMesh.visible = false;
   scene.add(edgeMesh);
 
-  const sunPanelEl = document.getElementById('sun-panel');
-  if (sunPanelEl) {
-    sunPanelEl.querySelector('#sun-panel-close')
-      ?.addEventListener('click', () => hidePanel());
-  }
-
-  function showPanel() {
-    if (sunPanelEl) sunPanelEl.classList.add('visible');
+  function showHologram() {
     holoMesh.visible = true;
     edgeMesh.visible = true;
   }
 
-  function hidePanel() {
-    if (sunPanelEl) sunPanelEl.classList.remove('visible');
+  function hideHologram() {
     holoMesh.visible = false;
     edgeMesh.visible = false;
   }
+
+  function isHologramVisible() { return holoMesh.visible; }
 
   function update(camera) {
     const d = camera.position.distanceTo(sun.position);
@@ -181,7 +176,7 @@ export async function createSun(scene) {
   }
 
   console.log(`[Sun] Initialized — radius ${SUN_RADIUS} units, true-size hologram ${SUN_REAL_RADIUS} units`);
-  return { sun, coronas, sunLight, update, showPanel, hidePanel, dispose };
+  return { sun, coronas, sunLight, update, showHologram, hideHologram, isHologramVisible, dispose };
 }
 
 function makeGlowShell(radius, colorHex, opacity, scene, position, name) {

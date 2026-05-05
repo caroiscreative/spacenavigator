@@ -33,6 +33,7 @@ export function createGroupOverlay(scene, groupEntries) {
   const envelopeGroup     = new THREE.Group();
   envelopeGroup.name      = 'group-envelope';
   envelopeGroup.frustumCulled = false;
+  envelopeGroup.renderOrder   = 999;   // draw after Earth so depthTest:false always wins
   scene.add(envelopeGroup);
 
   const _proj = new THREE.Vector3();   // reused in updateReticles

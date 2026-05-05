@@ -6,8 +6,6 @@ const SUN_DIRECTION = new THREE.Vector3(0.75, 0.0, 0.64).normalize();
 const AU_SCENE      = 650;     // 1 AU in scene units (matches sun.js SUN_DISTANCE)
 const DEG           = Math.PI / 180;
 
-const ORBIT_RING_SHOW_DIST = 2000;   // scene units — start fading in
-const ORBIT_RING_FULL_DIST = 22000;  // scene units — fully opaque (outer solar system scale)
 const MOON_ORBIT_SHOW_DIST = 2000;  // scene units (same as planet rings)
 const MOON_ORBIT_FULL_DIST = 12000;  // scene units — fully opaque
 
@@ -27,9 +25,10 @@ function getInclinationScale(camDist) {
   return 1 + (INCL_MAX_SCALE - 1) * ease;
 }
 
-function applyOrbitTilt(ring, camDist) {
-  const scale = getInclinationScale(camDist);
-  const i     = ring.inclinationDeg * scale * DEG;
+function applyOrbitTilt(ring) {
+  // Use real inclination — no amplification. Planets must sit on their orbit rings,
+  // so both the ring tilt and the planet's Y position must use the same angle.
+  const i     = ring.inclinationDeg * DEG;
   const Omega = ring.ascNodeDeg * DEG;
   _nodeAxis.set(Math.cos(Omega), 0, -Math.sin(Omega));
   _inclQuat.setFromAxisAngle(_nodeAxis, i);
@@ -289,9 +288,14 @@ const PLANETS = [
   },
 ];
 
-const ORBIT_DIM      = 0.45;  // full-brightness opacity at solar system scale
-const ORBIT_DIM_NEAR = 0.04;  // near-zero opacity at LEO/Earth view — rings emerge as you zoom out
+const ORBIT_DIM       = 0.50;  // fixed opacity — always visible, no fade
 const ORBIT_RING_SEGS = 128;
+
+// Line thickness by camera distance (WebGPU supports linewidth natively)
+const RING_LW_MIN  = 0.8;    // thin at close range
+const RING_LW_MAX  = 3.0;    // thick at full solar system scale
+const RING_LW_NEAR = 800;    // scene units where min width applies
+const RING_LW_FAR  = 40000;  // scene units where max width applies
 const ORBIT_COLORS = Object.fromEntries(
   PLANETS.map(p => [p.name, new THREE.Color(p.color).multiplyScalar(ORBIT_DIM)])
 );
@@ -364,8 +368,9 @@ export function createSolarSystem(scene, camera) {
           const rCosB = r * Math.cos(B);
 
           planet.eclX =  rCosB * Math.cos(L);
+          planet.eclY =  r * Math.sin(B);          // true out-of-ecliptic component
           planet.eclZ = -rCosB * Math.sin(L);
-          planet.mesh.position.set(sunPos.x + planet.eclX, sunPos.y, sunPos.z + planet.eclZ);
+          planet.mesh.position.set(sunPos.x + planet.eclX, sunPos.y + planet.eclY, sunPos.z + planet.eclZ);
         } catch {
         }
 
@@ -375,32 +380,36 @@ export function createSolarSystem(scene, camera) {
       }
     }
 
-    const inclFactor  = (getInclinationScale(camDist) - 1) / (INCL_MAX_SCALE - 1); // 0→1
-    const ringOpacity = ORBIT_DIM_NEAR + (ORBIT_DIM - ORBIT_DIM_NEAR) * inclFactor;
+    // Line width grows with distance — rings always fully visible, no fade
+    const lwT      = Math.max(0, Math.min(1, (camDist - RING_LW_NEAR) / (RING_LW_FAR - RING_LW_NEAR)));
+    const ringLW   = RING_LW_MIN + (RING_LW_MAX - RING_LW_MIN) * lwT;
 
     for (const planet of planets) {
       if (planet.orbitRing) {
-        planet.orbitRing.line.visible = true;
-        planet.orbitRing.mat.opacity  = ringOpacity;
-        applyOrbitTilt(planet.orbitRing, camDist);
+        planet.orbitRing.line.visible    = true;
+        planet.orbitRing.mat.opacity     = ORBIT_DIM;
+        planet.orbitRing.mat.linewidth   = ringLW;
+        applyOrbitTilt(planet.orbitRing);   // uses real inclination — matches planet Y
       }
-      if (planet.eclX !== undefined && planet.orbitRing) {
-        _tmpVec.set(planet.eclX, 0, planet.eclZ);
-        _tmpVec.applyQuaternion(planet.orbitRing.group.quaternion);
-        planet.mesh.position.set(sunPos.x + _tmpVec.x, sunPos.y + _tmpVec.y, sunPos.z + _tmpVec.z);
+      if (planet.eclX !== undefined) {
+        // Use the real heliocentric ecliptic position — eclY comes from latitude B.
+        // The ring uses the same real inclination, so the planet sits on its ring.
+        planet.mesh.position.set(sunPos.x + planet.eclX, sunPos.y + (planet.eclY ?? 0), sunPos.z + planet.eclZ);
         if (planet.ringMesh) {
           planet.ringMesh.position.copy(planet.mesh.position);
         }
       }
     }
-    earthOrbitRing.line.visible = true;
-    earthOrbitRing.mat.opacity  = ringOpacity;
-    applyOrbitTilt(earthOrbitRing, camDist);
+    earthOrbitRing.line.visible    = true;
+    earthOrbitRing.mat.opacity     = ORBIT_DIM;
+    earthOrbitRing.mat.linewidth   = ringLW;
+    applyOrbitTilt(earthOrbitRing);
 
-    moonOrbitRing.line.visible  = true;
-    moonOrbitRing.mat.opacity   = ORBIT_DIM;
+    moonOrbitRing.line.visible    = true;
+    moonOrbitRing.mat.opacity     = ORBIT_DIM;
+    moonOrbitRing.mat.linewidth   = Math.max(RING_LW_MIN, ringLW * 0.7);
     moonOrbitRing.group.position.set(0, 0, 0);   // Earth always at scene origin
-    applyOrbitTilt(moonOrbitRing, camDist);
+    applyOrbitTilt(moonOrbitRing);
 
     const moon = moonGeocentric(simTimeMs);
     const cosB = Math.cos(moon.beta);

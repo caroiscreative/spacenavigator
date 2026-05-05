@@ -169,6 +169,15 @@ export function createRiskOverlay(scene, satelliteLayer) {
     worker.postMessage({ type: 'scan', positions: positions.slice(), count, tles });
   }
 
+  // Public: tick a background scan even when the visual overlay is hidden.
+  // Called by the operator dashboard so conjunction data stays fresh regardless
+  // of hudRiskActive or camera zoom level.
+  function tickScan(now) {
+    if (satelliteLayer && now - lastScanTime >= SCAN_INTERVAL_MS) {
+      triggerScan(now);
+    }
+  }
+
   function update(now) {
     if (!visible) return;
 
@@ -266,5 +275,5 @@ export function createRiskOverlay(scene, satelliteLayer) {
   }
 
   console.log('[RiskOverlay] Conjunction risk layer created (v2 — 4 visual layers)');
-  return { update, setVisible, toggle, isVisible, getConjunctions, getData, dispose };
+  return { update, tickScan, setVisible, toggle, isVisible, getConjunctions, getData, dispose };
 }

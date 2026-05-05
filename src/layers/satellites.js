@@ -45,6 +45,28 @@ export function createSatellites(scene, tles) {
 
   console.log(`[Satellites] ${activeCount} active  |  ${debrisCount} debris`);
 
+  // Parse launch year from TLE COSPAR international designator (line1 chars 9-10).
+  // Format: "57001A" = 1957, "98067A" = 1998, "00001A" = 2000.
+  function _parseLaunchYear(line1) {
+    const s = (line1 || '').substring(9, 11).trim();
+    if (!s || s === '00') return 0;
+    const yr = parseInt(s, 10);
+    if (isNaN(yr)) return 0;
+    return yr >= 57 ? 1900 + yr : 2000 + yr;
+  }
+  const activeLaunchYears = new Int16Array(activeCount);
+  const debrisLaunchYears = new Int16Array(debrisCount);
+  for (let ai = 0; ai < activeCount; ai++) {
+    activeLaunchYears[ai] = _parseLaunchYear(tles[activeIndices[ai]].line1);
+  }
+  for (let di = 0; di < debrisCount; di++) {
+    debrisLaunchYears[di] = _parseLaunchYear(tles[debrisIndices[di]].line1);
+  }
+
+  // Position used to park not-yet-launched satellites outside the view frustum.
+  const _HIDDEN_X = 9e9;
+  let _historicalYear = null;   // null = no filter
+
   const GM_KM3 = 3.986004418e5;
   const satAltKm = new Float32Array(count);
   for (let i = 0; i < count; i++) {
@@ -75,14 +97,17 @@ export function createSatellites(scene, tles) {
   activeGeo.setAttribute('position', new THREE.BufferAttribute(activePosArray, 3));
   activeGeo.setAttribute('color',    new THREE.BufferAttribute(activeColorArray, 3));
 
+  const _ACTIVE_SIZE  = 4.0;
+  const _DEBRIS_SIZE  = 2.5;
+
   const activeMat = new THREE.PointsNodeMaterial({
     vertexColors:    true,
-    size:            2.5,
+    size:            _ACTIVE_SIZE,
     transparent:     true,
-    opacity:         0.85,
+    opacity:         1.0,
     blending:        THREE.AdditiveBlending,
     depthWrite:      false,
-    depthTest:       false,  // always visible over Earth — visualization overlay style
+    depthTest:       false,
     sizeAttenuation: false,
   });
 
@@ -107,12 +132,12 @@ export function createSatellites(scene, tles) {
 
   const debrisMat = new THREE.PointsNodeMaterial({
     vertexColors:    true,
-    size:            1.5,            // slightly smaller than active satellites
+    size:            _DEBRIS_SIZE,
     transparent:     true,
-    opacity:         0.65,           // slightly more transparent — debris is "background noise"
+    opacity:         0.80,
     blending:        THREE.AdditiveBlending,
     depthWrite:      false,
-    depthTest:       false,          // always visible over Earth — visualization overlay style
+    depthTest:       false,
     sizeAttenuation: false,
   });
 
@@ -127,7 +152,7 @@ export function createSatellites(scene, tles) {
 
   const hlMaterial = new THREE.PointsNodeMaterial({
     color:           0xFFD700,
-    size:            8,
+    size:            10,
     transparent:     true,
     opacity:         1.0,
     blending:        THREE.AdditiveBlending,
@@ -148,7 +173,7 @@ export function createSatellites(scene, tles) {
 
   const hvMaterial = new THREE.PointsNodeMaterial({
     color:           0x00E5FF,
-    size:            5,
+    size:            6,
     transparent:     true,
     opacity:         0.9,
     blending:        THREE.AdditiveBlending,
@@ -204,17 +229,37 @@ export function createSatellites(scene, tles) {
 
       for (let ai = 0; ai < activeCount; ai++) {
         const gi = activeIndices[ai];
-        activePosArray[ai * 3]     = pendingPositions[gi * 3];
-        activePosArray[ai * 3 + 1] = pendingPositions[gi * 3 + 1];
-        activePosArray[ai * 3 + 2] = pendingPositions[gi * 3 + 2];
+        if (_historicalYear !== null && activeLaunchYears[ai] > _historicalYear) {
+          activePosArray[ai * 3]     = _HIDDEN_X;
+          activePosArray[ai * 3 + 1] = 0;
+          activePosArray[ai * 3 + 2] = 0;
+          // Also hide from raycaster / hover lookup
+          positionArray[gi * 3]     = _HIDDEN_X;
+          positionArray[gi * 3 + 1] = 0;
+          positionArray[gi * 3 + 2] = 0;
+        } else {
+          activePosArray[ai * 3]     = pendingPositions[gi * 3];
+          activePosArray[ai * 3 + 1] = pendingPositions[gi * 3 + 1];
+          activePosArray[ai * 3 + 2] = pendingPositions[gi * 3 + 2];
+        }
       }
       activeGeo.attributes.position.needsUpdate = true;
 
       for (let di = 0; di < debrisCount; di++) {
         const gi = debrisIndices[di];
-        debrisPosArray[di * 3]     = pendingPositions[gi * 3];
-        debrisPosArray[di * 3 + 1] = pendingPositions[gi * 3 + 1];
-        debrisPosArray[di * 3 + 2] = pendingPositions[gi * 3 + 2];
+        if (_historicalYear !== null && debrisLaunchYears[di] > _historicalYear) {
+          debrisPosArray[di * 3]     = _HIDDEN_X;
+          debrisPosArray[di * 3 + 1] = 0;
+          debrisPosArray[di * 3 + 2] = 0;
+          // Also hide from raycaster / hover lookup
+          positionArray[gi * 3]     = _HIDDEN_X;
+          positionArray[gi * 3 + 1] = 0;
+          positionArray[gi * 3 + 2] = 0;
+        } else {
+          debrisPosArray[di * 3]     = pendingPositions[gi * 3];
+          debrisPosArray[di * 3 + 1] = pendingPositions[gi * 3 + 1];
+          debrisPosArray[di * 3 + 2] = pendingPositions[gi * 3 + 2];
+        }
       }
       debrisGeo.attributes.position.needsUpdate = true;
 
@@ -240,6 +285,16 @@ export function createSatellites(scene, tles) {
     return tles[i].category === 'debris' ? debrisPts.visible : activePts.visible;
   }
 
+  // Returns true if the satellite at global index i is hidden by historical year filter.
+  function _isHistoricallyHidden(i) {
+    if (i < 0 || _historicalYear === null) return false;
+    const ai = activeSubIndex[i];
+    if (ai >= 0) return activeLaunchYears[ai] > _historicalYear;
+    const di = debrisSubIndex[i];
+    if (di >= 0) return debrisLaunchYears[di] > _historicalYear;
+    return false;
+  }
+
   function _syncHighlightVisibility() {
     hlPoints.visible = _isLayerVisibleForIndex(selectedIndex);
     hvPoints.visible = _isLayerVisibleForIndex(hoveredIndex);
@@ -259,7 +314,7 @@ export function createSatellites(scene, tles) {
 
   function setSelected(i) {
     selectedIndex = i;
-    if (i < 0) {
+    if (i < 0 || _isHistoricallyHidden(i)) {
       hlPoints.visible = false;
       return;
     }
@@ -272,7 +327,7 @@ export function createSatellites(scene, tles) {
 
   function setHovered(i) {
     hoveredIndex = i;
-    if (i < 0) {
+    if (i < 0 || _isHistoricallyHidden(i)) {
       hvPoints.visible = false;
       return;
     }
@@ -286,7 +341,7 @@ export function createSatellites(scene, tles) {
   function setSize(px) {
     activeMat.size        = px;
     activeMat.needsUpdate = true;
-    debrisMat.size        = px * 0.60;   // debris = 60% of active (original ratio)
+    debrisMat.size        = px * 0.60;
     debrisMat.needsUpdate = true;
   }
 
@@ -304,8 +359,25 @@ export function createSatellites(scene, tles) {
 
   function isDebrisVisible()  { return debrisPts.visible; }
 
-  let _altBands = [];
+  function setHistoricalOpacity(fraction) {
+    const f = Math.max(0.04, Math.min(1.0, fraction));
+    activeMat.opacity = 1.0 * f;
+    debrisMat.opacity = 0.80 * f;
+    activeMat.needsUpdate = true;
+    debrisMat.needsUpdate = true;
+  }
+
+  function setHistoricalYear(year) {
+    _historicalYear = (year !== null && year !== undefined) ? year : null;
+  }
+
+  function clearHistoricalYear() {
+    _historicalYear = null;
+  }
+
+  let _altBands    = [];
   let _launchNorads = null;
+  let _dragRiskMap  = null;   // Map<globalIndex, 'elevated'|'high'|'extreme'> or null
 
   function setAltitudeBands(bands) {
     _altBands = bands ?? [];
@@ -389,9 +461,10 @@ export function createSatellites(scene, tles) {
         activeColorArray[vi + 1] = Math.min(1, activeBaseColorArray[vi + 1] * 2.2);
         activeColorArray[vi + 2] = Math.min(1, activeBaseColorArray[vi + 2] * 2.2);
       } else {
-        activeColorArray[vi]     = activeBaseColorArray[vi]     * 0.04;
-        activeColorArray[vi + 1] = activeBaseColorArray[vi + 1] * 0.04;
-        activeColorArray[vi + 2] = activeBaseColorArray[vi + 2] * 0.04;
+        // Zero out color — with additive blending, black pixels are fully invisible
+        activeColorArray[vi]     = 0;
+        activeColorArray[vi + 1] = 0;
+        activeColorArray[vi + 2] = 0;
       }
     }
     activeGeo.attributes.color.needsUpdate = true;
@@ -404,9 +477,73 @@ export function createSatellites(scene, tles) {
         debrisColorArray[vi + 1] = Math.min(1, debrisBaseColorArray[vi + 1] * 2.2);
         debrisColorArray[vi + 2] = Math.min(1, debrisBaseColorArray[vi + 2] * 2.2);
       } else {
-        debrisColorArray[vi]     = debrisBaseColorArray[vi]     * 0.04;
-        debrisColorArray[vi + 1] = debrisBaseColorArray[vi + 1] * 0.04;
-        debrisColorArray[vi + 2] = debrisBaseColorArray[vi + 2] * 0.04;
+        // Zero out color — with additive blending, black pixels are fully invisible
+        debrisColorArray[vi]     = 0;
+        debrisColorArray[vi + 1] = 0;
+        debrisColorArray[vi + 2] = 0;
+      }
+    }
+    debrisGeo.attributes.color.needsUpdate = true;
+  }
+
+  // RGB triplets for risk levels — matching DRAG_RISK_COLOR in drag-forecast.js
+  const RISK_RGB = {
+    elevated: [1.000, 0.792, 0.157],   // #FFCA28 yellow
+    high:     [1.000, 0.427, 0.000],   // #FF6D00 orange
+    extreme:  [1.000, 0.090, 0.267],   // #FF1744 red
+  };
+
+  /**
+   * Apply drag-risk coloring overlay.
+   * At-risk satellites are colored by risk level; all others retain their base color.
+   * @param {Map<number,string>} riskMap  globalIndex → risk level
+   */
+  function setDragRisk(riskMap) {
+    _dragRiskMap = riskMap;
+    _rebuildDragRisk();
+  }
+
+  function clearDragRisk() {
+    _dragRiskMap = null;
+    _restoreBaseColors();
+  }
+
+  function _rebuildDragRisk() {
+    if (!_dragRiskMap || _dragRiskMap.size === 0) {
+      _restoreBaseColors();
+      return;
+    }
+
+    for (let ai = 0; ai < activeCount; ai++) {
+      const gi    = activeIndices[ai];
+      const level = _dragRiskMap.get(gi);
+      const vi    = ai * 3;
+      if (level && RISK_RGB[level]) {
+        const rgb = RISK_RGB[level];
+        activeColorArray[vi]     = rgb[0];
+        activeColorArray[vi + 1] = rgb[1];
+        activeColorArray[vi + 2] = rgb[2];
+      } else {
+        activeColorArray[vi]     = activeBaseColorArray[vi];
+        activeColorArray[vi + 1] = activeBaseColorArray[vi + 1];
+        activeColorArray[vi + 2] = activeBaseColorArray[vi + 2];
+      }
+    }
+    activeGeo.attributes.color.needsUpdate = true;
+
+    for (let di = 0; di < debrisCount; di++) {
+      const gi    = debrisIndices[di];
+      const level = _dragRiskMap.get(gi);
+      const vi    = di * 3;
+      if (level && RISK_RGB[level]) {
+        const rgb = RISK_RGB[level];
+        debrisColorArray[vi]     = rgb[0];
+        debrisColorArray[vi + 1] = rgb[1];
+        debrisColorArray[vi + 2] = rgb[2];
+      } else {
+        debrisColorArray[vi]     = debrisBaseColorArray[vi];
+        debrisColorArray[vi + 1] = debrisBaseColorArray[vi + 1];
+        debrisColorArray[vi + 2] = debrisBaseColorArray[vi + 2];
       }
     }
     debrisGeo.attributes.color.needsUpdate = true;
@@ -426,8 +563,11 @@ export function createSatellites(scene, tles) {
     getPositions, getCount, getTLE,
     setSelected, setHovered,
     setVisible, setDebrisVisible, isActiveVisible, isDebrisVisible,
+    setHistoricalOpacity,
+    setHistoricalYear, clearHistoricalYear,
     setSize,
     setAltitudeBands, clearAltitudeBands,
     setLaunchGroup, clearLaunchGroup,
+    setDragRisk, clearDragRisk,
   };
 }

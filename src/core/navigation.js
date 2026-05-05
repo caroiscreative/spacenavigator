@@ -91,6 +91,23 @@ export function createNavigation(camera, controls) {
     animating    = true;
   }
 
+  /**
+   * Rotate the camera to face a given direction while keeping Earth (origin)
+   * as the orbit center. Safe for geographic orientation — never moves target.
+   * @param {THREE.Vector3} dir  - Unit vector pointing toward the desired viewing direction
+   * @param {number}        dist - Distance from Earth center to position camera at
+   */
+  function flyToDir(dir, dist) {
+    // Always reset orbit target to Earth's origin so the camera keeps orbiting Earth
+    controls.target.set(0, 0, 0);
+    animFromDist = camera.position.length();
+    animToDist   = dist;
+    animFromDir  = camera.position.clone().normalize();
+    animToDir    = dir.clone().normalize();
+    animStart    = performance.now();
+    animating    = true;
+  }
+
   function setFocusPlanet(mesh) {
     focusMesh = mesh;
     if (mesh && mesh.userData.planetDef) {
@@ -137,5 +154,5 @@ export function createNavigation(camera, controls) {
     if (elDist) elDist.textContent = distStr;
   }
 
-  return { update, flyTo, flyToPoint, setFocusPlanet, clearFocusPlanet };
+  return { update, flyTo, flyToPoint, flyToDir, setFocusPlanet, clearFocusPlanet };
 }

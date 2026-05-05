@@ -3,6 +3,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   root: 'src',              // index.html lives in src/
   publicDir: '../public',   // public assets folder stays at project root
+  cacheDir: '/tmp/vite-cache-spacenavigator',
   server: {
     port: 3000,
     open: true,

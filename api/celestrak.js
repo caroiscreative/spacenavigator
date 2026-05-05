@@ -1,36 +1,53 @@
-// api/celestrak.js — Vercel serverless proxy for CelesTrak TLE data
-// CelesTrak blocks requests with browser headers (Origin, Referer, sec-fetch-*)
-// This function strips those headers and forwards with a neutral User-Agent.
+/**
+ * Vercel serverless function — CelesTrak proxy
+ *
+ * CelesTrak blocks requests that carry browser-identifying headers
+ * (Origin, Referer, Sec-Fetch-*). This function forwards the request
+ * server-side with those headers stripped.
+ *
+ * Rewrite rule in vercel.json:
+ *   /celestrak/:path* → /api/celestrak?proxyPath=:path*
+ *
+ * The original query string (GROUP=, FORMAT=, etc.) is forwarded as-is.
+ */
 
 export default async function handler(req, res) {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    return res.status(204).end();
+  // Extract the captured path segment; everything else is upstream query params
+  const { proxyPath, ...upstreamQuery } = req.query;
+
+  if (!proxyPath) {
+    res.status(400).json({ error: 'Missing proxyPath' });
+    return;
   }
 
-  const qs = new URLSearchParams(req.query || {}).toString();
-  const upstream = `https://celestrak.org/NORAD/elements/gp.php${qs ? '?' + qs : ''}`;
+  const qs = new URLSearchParams(upstreamQuery).toString();
+  const upstreamUrl = `https://celestrak.org/${proxyPath}${qs ? '?' + qs : ''}`;
 
   try {
-    const response = await fetch(upstream, {
+    const upstream = await fetch(upstreamUrl, {
+      method: req.method,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SpaceNavigator/1.0)',
+        // Identify as a script, not a browser — prevents CelesTrak's hotlink filter
+        'User-Agent': 'Mozilla/5.0 (compatible; SpaceNavigator/1.0; +https://spacenavigator.io)',
         'Accept': 'text/plain, application/json, */*',
+        // Do NOT forward Origin, Referer, or Sec-Fetch-* headers
       },
+      signal: AbortSignal.timeout(15_000),
     });
 
-    const body = await response.text();
-    const ct = response.headers.get('Content-Type') || 'text/plain';
+    if (!upstream.ok) {
+      res.status(upstream.status).send('');
+      return;
+    }
 
-    res.setHeader('Content-Type', ct);
-    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600');
+    const body = await upstream.text();
+
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.status(response.status).send(body);
+    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=600');
+    res.setHeader('Content-Type', upstream.headers.get('content-type') || 'text/plain');
+    res.status(200).send(body);
   } catch (err) {
-    console.error('[celestrak-proxy] fetch failed:', err.message);
+    console.error('[api/celestrak] fetch error:', err.message);
     res.status(503).send('');
   }
 }

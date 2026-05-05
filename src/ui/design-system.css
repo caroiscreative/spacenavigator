@@ -39,7 +39,7 @@
   /* ── TEXT ────────────────────────────────────── */
   --text-primary:     #E8F4FF;
   --text-secondary:   #7A9BB5;
-  --text-dim:         #3A5060;   /* inactivo, deshabilitado */
+  --text-dim:         #6B8A9F;   /* inactivo, deshabilitado */
   --text-accent:      #00D4FF;
 
   /* ── BORDERS ─────────────────────────────────── */
@@ -52,9 +52,9 @@
   /* ── TYPOGRAPHY ──────────────────────────────── */
   --font:       'Geist Mono', 'Courier New', monospace;
 
-  --text-xs:    11px;   /* coordenadas, timestamps, metadatos */
+  --text-xs:    12px;   /* mínimo absoluto — coordenadas, timestamps, metadatos */
   --text-sm:    12px;   /* mínimo legible — datos de tabla, tooltips */
-  --text-base:  14px;   /* texto común de panel */
+  --text-base:  16px;   /* texto estándar de panel */
   --text-md:    16px;   /* labels generales, items de lista */
   --text-lg:    18px;   /* títulos de sección */
   --text-xl:    22px;   /* títulos de panel */
@@ -319,7 +319,7 @@
 .section-hdr:hover { color: var(--cyan); }
 
 .section-hdr .chevron {
-  font-size: 10px;
+  font-size: 12px;
   transition: transform var(--t-fast);
   display: inline-block;
 }
@@ -504,6 +504,43 @@
 @keyframes reticle-in {
   from { opacity: 0; transform: scale(1.4); }
   to   { opacity: 1; transform: scale(1); }
+}
+
+/* ============================================================
+   INFO ROW  (.info-row > .info-label + .info-value)
+   Standard pattern for label/value pairs in all detail panels.
+   Rule: label = --text-secondary (grey), value = --text-primary (white).
+   Semantic overrides (e.g. danger value in red) are applied inline.
+   ============================================================ */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border-dim);
+  font-size: var(--text-sm);
+}
+.info-row:last-child { border-bottom: none; }
+
+.info-label {
+  font-size: var(--text-xs);
+  letter-spacing: 0.09em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.info-value {
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.info-section-label {
+  font-size: var(--text-xs);
+  letter-spacing: 0.14em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  margin-top: var(--space-2);
 }
 
 /* ============================================================

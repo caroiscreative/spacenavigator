@@ -1,5 +1,6 @@
 
 import { ALL_DSOS } from '../data/galaxy-catalog.js';
+import { HISTORICAL_STARS } from '../data/star-catalog.js';
 
 const GALAXY_TYPES    = new Set(['spiral', 'elliptical', 'irregular']);
 const NEBULA_TYPES    = new Set(['emission', 'planetary', 'remnant', 'reflection']);
@@ -7,6 +8,7 @@ const BLACKHOLE_TYPES = new Set(['blackhole']);
 
 const INTERSTELLAR_OBJECTS = [
   {
+    id:    'oumuamua',
     name:  "1I / ʻOumuamua",
     sub:   "First interstellar object · 2017",
     color: '#CE93D8',
@@ -22,6 +24,7 @@ const INTERSTELLAR_OBJECTS = [
     ],
   },
   {
+    id:    'borisov',
     name:  "2I / Borisov",
     sub:   "First interstellar comet · 2019",
     color: '#80DEEA',
@@ -37,6 +40,7 @@ const INTERSTELLAR_OBJECTS = [
     ],
   },
   {
+    id:    'atlas',
     name:  "3I / ATLAS",
     sub:   "Third interstellar object · 2025",
     color: '#FFB347',
@@ -119,7 +123,7 @@ function catColor(cat) {
   }
 }
 
-export function createExplorerPanel({ onSelectDso, getTleData, onSelectSat, onSelectGroup, flyTo }) {
+export function createExplorerPanel({ onSelectDso, onSelectStar, getTleData, onSelectSat, onSelectGroup, onSelectInterstellar, flyTo }) {
   const panelEl = document.getElementById('explorer-panel');
   if (!panelEl) return null;
 
@@ -193,6 +197,7 @@ export function createExplorerPanel({ onSelectDso, getTleData, onSelectSat, onSe
   function makeIntlCard(obj) {
     const card = document.createElement('div');
     card.className = 'exp-intl-card';
+    card.style.cursor = 'pointer';
     const imgHtml = obj.imageUrl ? `
       <div class="exp-intl-thumb-wrap">
         <img class="exp-intl-thumb"
@@ -203,14 +208,28 @@ export function createExplorerPanel({ onSelectDso, getTleData, onSelectSat, onSe
         <span class="exp-intl-thumb-credit">${obj.imageCredit ?? ''}</span>
       </div>` : '';
     card.innerHTML = `
-      <div class="exp-intl-name" style="color:${obj.color}">${obj.name}</div>
-      <div class="exp-intl-sub">${obj.sub}</div>
+      <div class="exp-intl-header">
+        <div>
+          <div class="exp-intl-name" style="color:${obj.color}">${obj.name}</div>
+          <div class="exp-intl-sub">${obj.sub}</div>
+        </div>
+        <span class="exp-intl-goto" style="color:${obj.color}">→</span>
+      </div>
       ${imgHtml}
       ${obj.rows.map(([l, v]) => `
         <div class="exp-intl-row">
           <span class="exp-intl-label">${l}</span>
           <span class="exp-intl-val">${v}</span>
         </div>`).join('')}`;
+
+    card.addEventListener('click', () => {
+      // Clear selected state from other cards
+      bodyEl.querySelectorAll('.exp-intl-card.exp-intl-selected')
+        .forEach(c => c.classList.remove('exp-intl-selected'));
+      card.classList.add('exp-intl-selected');
+      card.style.borderColor = obj.color + '80';
+      onSelectInterstellar?.(obj);
+    });
     return card;
   }
 
@@ -391,6 +410,28 @@ export function createExplorerPanel({ onSelectDso, getTleData, onSelectSat, onSe
     }
   }
 
+  function makeStarRow(star) {
+    const el = document.createElement('div');
+    el.className = 'exp-row';
+    el.innerHTML = `
+      <span class="exp-dot" style="background:${star.color}"></span>
+      <span class="exp-name">${star.name}</span>
+      <span class="exp-val" style="opacity:0.55;font-size:11px">${star.bayer}</span>`;
+    el.addEventListener('click', () => {
+      bodyEl.querySelectorAll('.exp-row.selected').forEach(r => r.classList.remove('selected'));
+      el.classList.add('selected');
+      onSelectStar?.(star);
+    });
+    return el;
+  }
+
+  function renderStars() {
+    bodyEl.innerHTML = '';
+    const sorted = [...HISTORICAL_STARS].sort((a, b) => a.magnitude - b.magnitude);
+    countEl.textContent = `${sorted.length} stars`;
+    sorted.forEach(star => bodyEl.appendChild(makeStarRow(star)));
+  }
+
   function renderBody() {
     const isOrbitTab = activeTab === 'satellites' || activeTab === 'debris';
     if (!isOrbitTab && searchWrap) searchWrap.classList.add('hidden');
@@ -417,6 +458,9 @@ export function createExplorerPanel({ onSelectDso, getTleData, onSelectSat, onSe
       countEl.textContent = `${INTERSTELLAR_OBJECTS.length} objects`;
       bodyEl.innerHTML = '';
       INTERSTELLAR_OBJECTS.forEach(obj => bodyEl.appendChild(makeIntlCard(obj)));
+
+    } else if (activeTab === 'stars') {
+      renderStars();
 
     } else if (activeTab === 'satellites') {
       renderSatBody(false);

@@ -9,9 +9,26 @@ const TEX_SIZE    = 128;          // canvas texture resolution — 128 is sharp 
 const DEG_TO_SCENE = SKY_RADIUS * DEG;
 
 const SPRITE_MIN  = 400;
-const SPRITE_MAX  = 32000;
+const SPRITE_MAX  = 16000;   // hard cap — keeps very large-angular objects (LMC, SMC) sane
+const SPRITE_MAX_LARGE = 8000;  // stricter cap for objects > 2° angular size
 
-const BASE_OPACITY = 0.85;
+const BASE_OPACITY      = 0.85;
+const BASE_OPACITY_REAL = 0.92;   // slightly higher for real Hubble/JWST images
+
+// ── Real-image texture loader ────────────────────────────────────────────────
+// Loads a remote image (Hubble, JWST, ESO) and swaps it into the sprite material.
+// Starts with the procedural texture; upgrades asynchronously when the image loads.
+const _texLoader = new THREE.TextureLoader();
+_texLoader.crossOrigin = 'anonymous';
+
+function loadRealTexture(url, onLoad) {
+  _texLoader.load(
+    url,
+    tex => { tex.needsUpdate = true; onLoad(tex); },
+    undefined,
+    err => console.warn('[DSO] real texture failed:', url, err),
+  );
+}
 
 function eqToScene(raDeg, decDeg) {
   const ra  = raDeg  * DEG;
@@ -470,11 +487,11 @@ export function createGalaxyLayer(scene) {
   const refs = ALL_DSOS.map(dso => {
     const texture  = getDSOTexture(dso);
     const material = new THREE.SpriteNodeMaterial({
-      map:          texture,
-      transparent:  true,
-      opacity:      BASE_OPACITY,
-      depthWrite:   false,
-      blending:     THREE.AdditiveBlending,
+      map:             texture,
+      transparent:     true,
+      opacity:         BASE_OPACITY,
+      depthWrite:      false,
+      blending:        THREE.AdditiveBlending,
       sizeAttenuation: true,
     });
 
@@ -484,13 +501,26 @@ export function createGalaxyLayer(scene) {
     const dist = SKY_RADIUS * 0.97;   // slightly inside star sphere to avoid z-fighting
     sprite.position.copy(dir.multiplyScalar(dist));
 
+    // Size: cap large-angular objects more aggressively — LMC/SMC/Andromeda look like blobs at full size
+    const isLarge   = dso.angularDeg > 2.0;
+    const cap       = isLarge ? SPRITE_MAX_LARGE : SPRITE_MAX;
+    const sizeScale = dso.imageUrl ? 1.8 : 1.5;
     const rawSize = Math.max(
       SPRITE_MIN,
-      Math.min(SPRITE_MAX, dso.angularDeg * DEG_TO_SCENE * 1.5),
+      Math.min(cap, dso.angularDeg * DEG_TO_SCENE * sizeScale),
     );
     sprite.scale.set(rawSize, rawSize, 1);
     sprite.userData.dso = dso;
     group.add(sprite);
+
+    // Async swap: load real Hubble/JWST image and replace procedural texture
+    if (dso.imageUrl) {
+      loadRealTexture(dso.imageUrl, tex => {
+        material.map     = tex;
+        material.opacity = BASE_OPACITY_REAL;
+        material.needsUpdate = true;
+      });
+    }
 
     return { dso, sprite, material, worldPos: sprite.position.clone() };
   });

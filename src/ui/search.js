@@ -1,5 +1,25 @@
 
-export function createSearch(getTleData, onSelect, flyTo) {
+import { CONSTELLATION_CATALOG } from '../layers/constellations.js';
+
+// Pre-build flat array for constellation search (built once at module load)
+const CONST_LIST = Object.entries(CONSTELLATION_CATALOG).map(([abbr, info]) => ({
+  abbr,
+  name:    info.name,
+  nameLow: info.name.toLowerCase(),
+  abbrLow: abbr.toLowerCase(),
+  kind:    'constellation',
+}));
+
+/**
+ * @param {function}  getTleData                 () → TLE array
+ * @param {function}  onSelect                   (idx, tle) — satellite selected
+ * @param {function}  flyTo                      (dist) — fly to sat
+ * @param {object}    [skyOpts]
+ * @param {function}  [skyOpts.getSkyObjects]    () → DSO array (ALL_DSOS)
+ * @param {function}  [skyOpts.onSelectDso]      (dso)
+ * @param {function}  [skyOpts.onSelectConstellation] (abbr)
+ */
+export function createSearch(getTleData, onSelect, flyTo, skyOpts = {}) {
   const overlay = document.getElementById('search-overlay');
   const input   = document.getElementById('search-input');
   const results = document.getElementById('search-results');
@@ -25,56 +45,113 @@ export function createSearch(getTleData, onSelect, flyTo) {
     const raw = input.value.trim();
     if (!raw) { results.innerHTML = ''; return; }
 
-    const q      = raw.toLowerCase();
-    const tles   = getTleData();
-    const hits   = [];
+    const q = raw.toLowerCase();
+    const items = [];   // { kind, label, sub, data }
 
-    for (let i = 0; i < tles.length; i++) {
+    // 1 — Satellites (up to 6)
+    const tles = getTleData();
+    for (let i = 0; i < tles.length && items.length < 6; i++) {
       const tle = tles[i];
-      if (
-        tle.name.toLowerCase().includes(q) ||
-        String(tle.norad).includes(q)
-      ) {
-        hits.push(i);
-        if (hits.length >= 10) break;
+      if (tle.name.toLowerCase().includes(q) || String(tle.norad).includes(q)) {
+        items.push({
+          kind: 'sat',
+          label: tle.name,
+          sub: `${tle.norad} · ${(tle.category ?? 'leo').toUpperCase()}`,
+          satIdx: i,
+          tle,
+        });
       }
     }
 
-    renderResults(hits, tles);
+    // 2 — Star clusters + DSOs (up to 4 more)
+    if (skyOpts.getSkyObjects) {
+      const dsos = skyOpts.getSkyObjects();
+      for (const dso of dsos) {
+        if (items.length >= 10) break;
+        const haystack = (dso.name + ' ' + (dso.designation ?? '') + ' ' + (dso.constellation ?? '')).toLowerCase();
+        if (haystack.includes(q)) {
+          items.push({
+            kind: 'dso',
+            label: dso.name,
+            sub: `${dso.designation ?? ''} · ${dso.constellation ?? ''}`.replace(/^ · | · $/,''),
+            dso,
+          });
+        }
+      }
+    }
+
+    // 3 — Constellations (up to 4 more, prefer prefix matches)
+    const constHits = CONST_LIST.filter(c =>
+      c.nameLow.includes(q) || c.abbrLow === q
+    ).sort((a, b) => {
+      // Exact-start matches float to top
+      const aStart = a.nameLow.startsWith(q) ? 0 : 1;
+      const bStart = b.nameLow.startsWith(q) ? 0 : 1;
+      return aStart - bStart;
+    }).slice(0, 4);
+
+    for (const c of constHits) {
+      if (items.length >= 12) break;
+      items.push({
+        kind: 'constellation',
+        label: c.name,
+        sub: `Constellation · ${c.abbr}`,
+        abbr: c.abbr,
+      });
+    }
+
+    renderResults(items);
   }
 
-  function renderResults(indices, tles) {
+  function renderResults(items) {
     results.innerHTML = '';
 
-    for (const idx of indices) {
-      const tle = tles[idx];
-      const li  = document.createElement('li');
+    for (const item of items) {
+      const li = document.createElement('li');
+      li.dataset.label = item.label;
 
-      const cat   = tle.category ?? 'leo';
-      const norad = tle.norad ?? '—';
-      li.textContent = `${tle.name}`;
-      li.dataset.satName = tle.name;
-
+      // Type badge
       const badge = document.createElement('span');
-      badge.textContent = ` ${norad} · ${cat.toUpperCase()}`;
-      badge.style.cssText = 'opacity:0.4; font-size:9px; margin-left:4px';
-      li.appendChild(badge);
+      badge.style.cssText = 'opacity:0.4; font-size:11px; margin-left:5px; text-transform:uppercase;';
 
-      li.addEventListener('click', () => {
-        selectResult(idx, tle);
-      });
+      if (item.kind === 'sat') {
+        li.textContent = item.label;
+        badge.textContent = item.sub;
+        li.appendChild(badge);
+        li.addEventListener('click', () => {
+          onSelect(item.satIdx, item.tle);
+          const dist = flyDistForCategory(item.tle.category);
+          flyTo?.(dist);
+          close();
+        });
+      } else if (item.kind === 'dso') {
+        const typePrefix = document.createElement('span');
+        typePrefix.style.cssText = 'color:var(--cyan); margin-right:6px; font-size:11px;';
+        typePrefix.textContent = '✦';
+        li.appendChild(typePrefix);
+        li.appendChild(document.createTextNode(item.label));
+        badge.textContent = item.sub;
+        li.appendChild(badge);
+        li.addEventListener('click', () => {
+          skyOpts.onSelectDso?.(item.dso);
+          close();
+        });
+      } else if (item.kind === 'constellation') {
+        const typePrefix = document.createElement('span');
+        typePrefix.style.cssText = 'color:#88aadd; margin-right:6px; font-size:11px;';
+        typePrefix.textContent = '⊹';
+        li.appendChild(typePrefix);
+        li.appendChild(document.createTextNode(item.label));
+        badge.textContent = item.sub;
+        li.appendChild(badge);
+        li.addEventListener('click', () => {
+          skyOpts.onSelectConstellation?.(item.abbr);
+          close();
+        });
+      }
 
       results.appendChild(li);
     }
-  }
-
-  function selectResult(idx, tle) {
-    onSelect(idx, tle);
-
-    const dist = flyDistForCategory(tle.category);
-    if (flyTo) flyTo(dist);
-
-    close();
   }
 
   input.addEventListener('input', doSearch);
@@ -107,7 +184,7 @@ export function createSearch(getTleData, onSelect, flyTo) {
       }
       next.classList.add('active');
       next.scrollIntoView({ block: 'nearest' });
-      input.value = next.dataset.satName ?? next.textContent.trim();
+      input.value = next.dataset.label ?? next.textContent.trim();
     }
   });
 
@@ -125,13 +202,13 @@ export function createSearch(getTleData, onSelect, flyTo) {
 
 function flyDistForCategory(category) {
   switch (category) {
-    case 'station':  return 20;    // LEO — very close
-    case 'starlink': return 20;    // LEO
-    case 'oneweb':   return 20;    // LEO
-    case 'leo':      return 20;    // LEO
-    case 'debris':   return 20;    // mixed, default to LEO altitude
-    case 'meo':      return 50;    // Medium Earth Orbit
-    case 'geo':      return 100;   // GEO — just outside GEO belt
+    case 'station':  return 20;
+    case 'starlink': return 20;
+    case 'oneweb':   return 20;
+    case 'leo':      return 20;
+    case 'debris':   return 20;
+    case 'meo':      return 50;
+    case 'geo':      return 100;
     default:         return 25;
   }
 }
