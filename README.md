@@ -4,7 +4,7 @@ Real-time 3D space situational awareness platform built entirely in the browser.
 
 Track **27,000+ satellites and debris objects** in real time using live TLE data from CelesTrak, propagated with SGP4 orbital mechanics. Explore the solar system, monitor space weather, and analyze orbital conjunction risk — no server required.
 
-**[spacenavigator.app](https://spacenavigator.app)**
+**[spacenavigator.app](https://spacenavigator-ten.app)**
 
 ---
 
