@@ -1,6 +1,6 @@
 
 
-const MASTER_VOL = 0.65;
+const MASTER_VOL = 0.22;
 
 let _ctx     = null;
 let _master  = null;
@@ -59,103 +59,101 @@ export function createUISounds() {
   function hover() {
     play((ctx, out) => {
       const now = ctx.currentTime;
-
       const src = ctx.createBufferSource();
       src.buffer = noiseBuf(ctx);
       const flt  = ctx.createBiquadFilter();
       flt.type = 'bandpass';
-      flt.frequency.value = 3200;
-      flt.Q.value = 6;
+      flt.frequency.value = 520;
+      flt.Q.value = 3;
       const g = mkGain(ctx);
-      env(g, 0.55, 0.001, 0.030, now);
+      env(g, 0.18, 0.001, 0.028, now);
       src.connect(flt); flt.connect(g); g.connect(out);
-      src.start(now); src.stop(now + 0.035);
+      src.start(now); src.stop(now + 0.032);
     });
   }
 
   function select() {
     play((ctx, out) => {
       const now = ctx.currentTime;
-      const o   = mkOsc(ctx, 'sine', 800);
+      const o   = mkOsc(ctx, 'sine', 240);
       const g   = mkGain(ctx);
-      o.frequency.exponentialRampToValueAtTime(1600, now + 0.06);
-      env(g, 0.70, 0.005, 0.30, now);
+      o.frequency.exponentialRampToValueAtTime(480, now + 0.07);
+      env(g, 0.28, 0.005, 0.22, now);
       o.connect(g); g.connect(out);
-      o.start(now); o.stop(now + 0.32);
+      o.start(now); o.stop(now + 0.24);
     });
   }
 
   function toggle() {
     play((ctx, out) => {
       const now = ctx.currentTime;
-      const o   = mkOsc(ctx, 'square', 1100);
+      const o   = mkOsc(ctx, 'sine', 280);
       const flt = ctx.createBiquadFilter();
-      flt.type = 'lowpass'; flt.frequency.value = 2000;
+      flt.type = 'lowpass'; flt.frequency.value = 500;
       const g   = mkGain(ctx);
-      env(g, 0.20, 0.003, 0.065, now);
+      env(g, 0.14, 0.003, 0.060, now);
       o.connect(flt); flt.connect(g); g.connect(out);
-      o.start(now); o.stop(now + 0.07);
+      o.start(now); o.stop(now + 0.065);
     });
   }
 
   function open() {
     play((ctx, out) => {
       const now = ctx.currentTime;
-      const o   = mkOsc(ctx, 'sine', 260);
+      const o   = mkOsc(ctx, 'sine', 120);
       const g   = mkGain(ctx);
-      o.frequency.exponentialRampToValueAtTime(580, now + 0.18);
-      env(g, 0.45, 0.012, 0.24, now);
+      o.frequency.exponentialRampToValueAtTime(260, now + 0.16);
+      env(g, 0.20, 0.012, 0.22, now);
       o.connect(g); g.connect(out);
-      o.start(now); o.stop(now + 0.26);
+      o.start(now); o.stop(now + 0.24);
     });
   }
 
   function close() {
     play((ctx, out) => {
       const now = ctx.currentTime;
-      const o   = mkOsc(ctx, 'sine', 580);
+      const o   = mkOsc(ctx, 'sine', 260);
       const g   = mkGain(ctx);
-      o.frequency.exponentialRampToValueAtTime(200, now + 0.14);
-      env(g, 0.38, 0.006, 0.20, now);
+      o.frequency.exponentialRampToValueAtTime(100, now + 0.13);
+      env(g, 0.18, 0.006, 0.18, now);
       o.connect(g); g.connect(out);
-      o.start(now); o.stop(now + 0.22);
+      o.start(now); o.stop(now + 0.20);
     });
   }
 
   function flyTo() {
     play((ctx, out) => {
       const now = ctx.currentTime;
-
       const src = ctx.createBufferSource();
       src.buffer = noiseBuf(ctx);
       const flt  = ctx.createBiquadFilter();
       flt.type = 'bandpass';
-      flt.frequency.setValueAtTime(150, now);
-      flt.frequency.exponentialRampToValueAtTime(5000, now + 0.30);
-      flt.Q.value = 1.6;
+      flt.frequency.setValueAtTime(80, now);
+      flt.frequency.exponentialRampToValueAtTime(1200, now + 0.28);
+      flt.Q.value = 1.4;
       const gn = mkGain(ctx);
-      env(gn, 0.55, 0.03, 0.34, now);
+      env(gn, 0.24, 0.03, 0.30, now);
       src.connect(flt); flt.connect(gn); gn.connect(out);
-      src.start(now); src.stop(now + 0.38);
+      src.start(now); src.stop(now + 0.34);
 
-      const o  = mkOsc(ctx, 'sine', 100);
+      const o  = mkOsc(ctx, 'sine', 60);
       const g2 = mkGain(ctx);
-      o.frequency.exponentialRampToValueAtTime(900, now + 0.24);
-      env(g2, 0.35, 0.018, 0.28, now);
+      o.frequency.exponentialRampToValueAtTime(320, now + 0.22);
+      env(g2, 0.18, 0.018, 0.26, now);
       o.connect(g2); g2.connect(out);
-      o.start(now); o.stop(now + 0.30);
+      o.start(now); o.stop(now + 0.28);
     });
   }
 
   function conjWarning() {
     play((ctx, out) => {
       const now = ctx.currentTime;
-      [0, 0.14].forEach(t => {
-        const o = mkOsc(ctx, 'sine', 720);
+      [0, 0.15].forEach(t => {
+        const o = mkOsc(ctx, 'sine', 280);
         const g = mkGain(ctx);
-        env(g, 0.65, 0.006, 0.11, now + t);
+        env(g, 0.30, 0.006, 0.10, now + t);
         o.connect(g); g.connect(out);
-        o.start(now + t); o.stop(now + t + 0.13);
+        o.start(now + t); o.stop(now + t + 0.12);
       });
     });
   }
@@ -163,12 +161,12 @@ export function createUISounds() {
   function conjCritical() {
     play((ctx, out) => {
       const now = ctx.currentTime;
-      [0, 0.12, 0.24].forEach(t => {
-        const o = mkOsc(ctx, 'sawtooth', 400);
+      [0, 0.13, 0.26].forEach(t => {
+        const o = mkOsc(ctx, 'sine', 180);
         const flt = ctx.createBiquadFilter();
-        flt.type = 'lowpass'; flt.frequency.value = 1600;
+        flt.type = 'lowpass'; flt.frequency.value = 700;
         const g = mkGain(ctx);
-        env(g, 0.72, 0.005, 0.10, now + t);
+        env(g, 0.38, 0.005, 0.10, now + t);
         o.connect(flt); flt.connect(g); g.connect(out);
         o.start(now + t); o.stop(now + t + 0.11);
       });
@@ -178,13 +176,13 @@ export function createUISounds() {
   function info() {
     play((ctx, out) => {
       const now = ctx.currentTime;
-      [440, 554, 660].forEach((freq, i) => {
+      [220, 277, 330].forEach((freq, i) => {
         const o = mkOsc(ctx, 'sine', freq);
         const g = mkGain(ctx);
-        env(g, 0.30 - i * 0.06, 0.008, 0.45 - i * 0.05, now + i * 0.04);
+        env(g, 0.16 - i * 0.03, 0.008, 0.40 - i * 0.05, now + i * 0.05);
         o.connect(g); g.connect(out);
-        o.start(now + i * 0.04);
-        o.stop(now + 0.55);
+        o.start(now + i * 0.05);
+        o.stop(now + 0.50);
       });
     });
   }
