@@ -394,24 +394,12 @@
       text-align: center;
     }
 
-    /* ── Active layer status dots — fixed top-right badge ───────── */
+    /* ── Active layer status dots — lives inside #status overlay ─── */
     #hud-dots {
-      position: fixed;
-      top: 10px;
-      right: 14px;
-      z-index: var(--z-hud);
       display: flex;
       align-items: center;
-      gap: 4px;
-      pointer-events: none;
-      user-select: none;
-    }
-    .hud-dot-label {
-      font-size: 9px;
-      color: rgba(107,138,159,0.40);
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      padding-right: 3px;
+      gap: 5px;
+      margin-top: 1px;
     }
     .hud-dot {
       width: 6px;
@@ -4279,6 +4267,17 @@
     <div><span class="label">SCALE</span>    <span id="stat-scale">—</span></div>
     <div><span class="label">DIST</span>     <span id="stat-dist">—</span></div>
     <div><span class="label">SPEED</span>    <span id="stat-speed">1×</span></div>
+    <div id="hud-dots">
+      <span class="label">Active</span>
+      <span class="hud-dot" id="dot-stars"   title="Stars"></span>
+      <span class="hud-dot" id="dot-sats"    title="Satellites"></span>
+      <span class="hud-dot" id="dot-debris"  title="Debris"></span>
+      <span class="hud-dot" id="dot-risk"    title="Risk"></span>
+      <span class="hud-dot" id="dot-orbits"  title="Orbit rings"></span>
+      <span class="hud-dot" id="dot-weather" title="Weather"></span>
+      <span class="hud-dot" id="dot-const"   title="Constellations"></span>
+      <span class="hud-dot" id="dot-belt"    title="Asteroids"></span>
+    </div>
   </div>
 
   
@@ -4469,18 +4468,6 @@
     </div>
   </div>
 
-  
-  <div id="hud-dots">
-    <span class="hud-dot-label">Active</span>
-    <span class="hud-dot" id="dot-stars"  title="Stars"></span>
-    <span class="hud-dot" id="dot-sats"   title="Satellites"></span>
-    <span class="hud-dot" id="dot-debris" title="Debris"></span>
-    <span class="hud-dot" id="dot-risk"   title="Risk"></span>
-    <span class="hud-dot" id="dot-orbits" title="Orbit rings"></span>
-    <span class="hud-dot" id="dot-weather" title="Weather"></span>
-    <span class="hud-dot" id="dot-const"  title="Constellations"></span>
-    <span class="hud-dot" id="dot-belt"   title="Asteroids"></span>
-  </div>
 
   
   <div id="operator-panel" class="hidden">
