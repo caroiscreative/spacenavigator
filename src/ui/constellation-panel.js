@@ -2,7 +2,6 @@
 import { CONSTELLATION_CATALOG } from '../layers/constellations.js';
 import { vec3ToRaDec, altAz, bestObservingMonth, bsAsVisibility } from '../utils/sky-math.js';
 
-// Buenos Aires observer coordinates
 const BSAS_LAT = -34.6131;
 const BSAS_LON = -58.3772;
 
@@ -38,7 +37,6 @@ export function createConstellationPanel(opts = {}) {
 
     _currentAbbr = abbr;
 
-    // Back-convert centroid 3D direction to RA/Dec
     const { raDeg, decDeg } = vec3ToRaDec(centroid3d.x, centroid3d.y, centroid3d.z);
     _currentRA  = raDeg;
     _currentDec = decDeg;

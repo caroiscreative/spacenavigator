@@ -1,8 +1,8 @@
 
-const TOOL_STORAGE_KEY = 'sn_panel_pos_v4';  // v4 — clears old left-side positions
-const PANEL_WIDTH      = 300;                 // px — uniform panel width
+const TOOL_STORAGE_KEY = 'sn_panel_pos_v4';
+const PANEL_WIDTH      = 300;
 const DOCK_ID          = 'panel-dock';
-const MARGIN           = 8;                   // min px from viewport edges (floated panels)
+const MARGIN           = 8;
 
 const INFO_PANEL_IDS = new Set([
   'sat-panel', 'planet-panel', 'dso-panel', 'sun-panel',
@@ -58,7 +58,7 @@ function moveIntoDock(panel) {
   panel.style.width     = '100%';
   panel.style.zIndex    = '';
 
-  if (panel.parentElement === d) return; // already in dock; styles updated above
+  if (panel.parentElement === d) return;
 
   const myIdx = PANEL_CONFIGS.findIndex(c => c.id === panel.id);
   let inserted = false;
@@ -230,10 +230,6 @@ export function initDragManager() {
   });
 }
 
-/**
- * Register a panel that was created after initDragManager() ran.
- * Call this once, right after the element has been appended to the DOM.
- */
 export function registerDynamicPanel(config) {
   const panel = document.getElementById(config.id);
   if (!panel) return;

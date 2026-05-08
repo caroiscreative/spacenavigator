@@ -1,8 +1,6 @@
 
 import { POPULATION_DATA, getPopulationAt } from '../data/history-events.js';
 
-// Curated fragment distribution data per debris event
-// shells: altitude (km) → approx % of fragments at that band
 const DEBRIS_META = {
   solwind: {
     altitudeKm: 555, trackedFragments: 285, totalEstimated: 285, decayYears: 15,
@@ -331,7 +329,6 @@ function drawMiniChart(canvas, eventYear, viewYear) {
   const xOf = yr    => pad.l + ((yr - minYear) / (maxYear - minYear)) * cw;
   const yOf = count => pad.t + ch - (count / maxTotal) * ch;
 
-  // Debris area fill
   ctx.beginPath();
   data.forEach((d, i) => {
     const x = xOf(d.year), y = yOf(d.debris);
@@ -346,7 +343,6 @@ function drawMiniChart(canvas, eventYear, viewYear) {
   ctx.fillStyle = grad;
   ctx.fill();
 
-  // Debris line
   ctx.beginPath();
   data.forEach((d, i) => {
     const x = xOf(d.year), y = yOf(d.debris);
@@ -356,7 +352,6 @@ function drawMiniChart(canvas, eventYear, viewYear) {
   ctx.lineWidth   = 1.5 * dpr;
   ctx.stroke();
 
-  // Event year marker — dashed red vertical
   const ex = xOf(eventYear);
   ctx.save();
   ctx.setLineDash([3 * dpr, 2 * dpr]);
@@ -368,7 +363,6 @@ function drawMiniChart(canvas, eventYear, viewYear) {
   ctx.stroke();
   ctx.restore();
 
-  // View year cursor — green glow line
   if (viewYear > eventYear) {
     const vx = xOf(viewYear);
     const glow = ctx.createLinearGradient(vx - 5 * dpr, 0, vx + 5 * dpr, 0);
@@ -385,7 +379,6 @@ function drawMiniChart(canvas, eventYear, viewYear) {
     ctx.stroke();
   }
 
-  // Year label at event marker
   ctx.font         = `${9 * dpr}px "SF Mono", monospace`;
   ctx.fillStyle    = 'rgba(239,83,80,0.65)';
   ctx.textAlign    = 'center';
@@ -509,11 +502,9 @@ export function createDebrisArchaeology({ onJumpToDate, onGotoEvent } = {}) {
     _eventYear = ev.year;
     const meta = DEBRIS_META[ev.id] ?? null;
 
-    // Header
     titleEl.textContent = ev.title;
     dateEl.textContent  = ev.date;
 
-    // Chips
     chipsEl.innerHTML = '';
     if (meta) {
       const altChip = document.createElement('span');
@@ -529,7 +520,6 @@ export function createDebrisArchaeology({ onJumpToDate, onGotoEvent } = {}) {
       chipsEl.appendChild(decayChip);
     }
 
-    // Stats
     if (meta) {
       const estHtml = meta.totalEstimated > meta.trackedFragments
         ? `<div class="da-stat">
@@ -551,7 +541,6 @@ export function createDebrisArchaeology({ onJumpToDate, onGotoEvent } = {}) {
       noteEl.style.display = 'none';
     }
 
-    // Shell bars
     if (meta && meta.shells.length > 0) {
       const maxPct = Math.max(...meta.shells.map(s => s.pct));
       shellsEl.innerHTML = meta.shells.map(s => {
@@ -568,12 +557,10 @@ export function createDebrisArchaeology({ onJumpToDate, onGotoEvent } = {}) {
       shellsEl.innerHTML = '<span style="font-size:12px;color:rgba(201,214,227,0.35)">No shell data available</span>';
     }
 
-    // Reset slider to event year
     sliderEl.value = 0;
 
     panel.classList.add('da-open');
 
-    // Draw chart after layout
     requestAnimationFrame(() => _updateStats(_eventYear));
   }
 

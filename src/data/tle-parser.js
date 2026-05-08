@@ -1,10 +1,10 @@
 
 const STATION_NORADS = new Set([
-  25544,  // ISS (ZARYA)
-  49044,  // Chinese Space Station (TIANHE)
-  36086,  // Tiangong-1 (deorbited, kept for completeness)
-  53239,  // CSS module
-  54216,  // CSS module
+  25544,
+  49044,
+  36086,
+  53239,
+  54216,
 ]);
 
 export function parseTLEText(raw) {
@@ -45,7 +45,7 @@ function parseTriplet(name, line1, line2) {
     const cleanName = name.replace(/\s+/g, ' ').trim();
     const category  = categorize(cleanName, norad, inclDeg, meanMotion, eccentricity);
 
-    const intlRaw     = line1.substring(9, 17).trim();   // e.g. "25155A"
+    const intlRaw     = line1.substring(9, 17).trim();
     const yearDigits  = parseInt(intlRaw.substring(0, 2), 10);
     const launchYear  = isNaN(yearDigits) ? null
                       : yearDigits >= 57 ? 1900 + yearDigits : 2000 + yearDigits;

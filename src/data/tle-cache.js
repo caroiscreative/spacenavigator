@@ -4,9 +4,9 @@ const DB_VERSION = 1;
 const STORE_NAME = 'tle_groups';
 
 export const TTL = {
-  active:  6  * 60 * 60 * 1000,   //  6 hours
-  debris:  24 * 60 * 60 * 1000,   // 24 hours
-  default: 6  * 60 * 60 * 1000,   //  6 hours (fallback)
+  active:  6  * 60 * 60 * 1000,
+  debris:  24 * 60 * 60 * 1000,
+  default: 6  * 60 * 60 * 1000,
 };
 
 export function openTLECache() {

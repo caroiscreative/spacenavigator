@@ -4364,10 +4364,10 @@
   
   <div id="hud">
 
-    <!-- ── Row 1: Navigate (planets + camera presets + time) ──────── -->
+    
     <div class="hud-row" id="hud-row-nav">
 
-      <!-- Brand -->
+      
       <div id="hud-brand" style="display:flex;align-items:center;gap:5px;padding:0 4px;opacity:0.65;pointer-events:none;flex-shrink:0;">
         <svg width="13" height="13" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
           <ellipse cx="24" cy="24" rx="17" ry="9.5" fill="none" stroke="#00D4FF" stroke-width="3" opacity="0.92" transform="rotate(-30, 24, 24)"/>
@@ -4378,7 +4378,7 @@
       </div>
       <span class="hud-sep">·</span>
 
-      <!-- Planets -->
+      
       <span class="hud-lbl">Fly to</span>
       <button class="hud-btn hud-planet-btn" data-key="e">Earth</button>
       <button class="hud-btn hud-planet-btn" data-key="s">Sun</button>
@@ -4392,7 +4392,7 @@
       <button class="hud-btn hud-planet-btn" data-key="n">Neptune</button>
       <span class="hud-sep">·</span>
 
-      <!-- Camera presets -->
+      
       <span class="hud-lbl">View</span>
       <button class="hud-btn hud-preset-btn" data-key="1" id="btn-preset-leo">LEO</button>
       <button class="hud-btn hud-preset-btn" data-key="2" id="btn-preset-geo">GEO</button>
@@ -4401,10 +4401,10 @@
       <button class="hud-btn hud-preset-btn" data-key="5" id="btn-preset-stars">Stars</button>
       <button class="hud-btn hud-preset-btn" data-key="6" id="btn-preset-outer">Outer</button>
 
-      <!-- Push time controls to the right -->
+      
       <div style="flex:1;min-width:8px;"></div>
 
-      <!-- Speed controls -->
+      
       <div class="hud-speed-group">
         <button class="hud-speed-btn" id="btn-speed-down"><span class="hud-speed-key">[</span> ◄</button>
         <span id="hud-speed-label">+1×</span>
@@ -4414,10 +4414,10 @@
       <span id="hud-date"></span>
     </div>
 
-    <!-- ── Row 2: Controls (scene · analysis · tools · help · dots) ── -->
+    
     <div class="hud-row" id="hud-row-ctrl">
 
-      <!-- Command palette (stays as trigger) -->
+      
       <div id="hud-grp-cmd" style="position:relative;flex-shrink:0;">
         <button class="hud-cmd-btn" id="btn-command">/ Command</button>
         <div id="cmd-palette" class="hidden">
@@ -4431,7 +4431,7 @@
       </div>
       <span class="hud-sep">·</span>
 
-      <!-- Scene toggles -->
+      
       <span class="hud-lbl">Scene</span>
       <button class="hud-btn hud-toggle-btn active" id="btn-starfield">Stars</button>
       <button class="hud-btn hud-toggle-btn" id="btn-orbits">Rings</button>
@@ -4441,7 +4441,7 @@
       <button class="hud-btn hud-toggle-btn hud-toggle-gold" id="btn-asteroids">Belt</button>
       <span class="hud-sep">·</span>
 
-      <!-- Analysis toggles -->
+      
       <span class="hud-lbl">Analysis</span>
       <button class="hud-btn hud-toggle-btn hud-toggle-green" id="btn-weather">Weather</button>
       <button class="hud-btn hud-toggle-btn hud-toggle-red" id="btn-risk">Risk</button>
@@ -4451,7 +4451,7 @@
       <button class="hud-btn hud-toggle-btn" id="btn-history">History</button>
       <span class="hud-sep">·</span>
 
-      <!-- Tools -->
+      
       <span class="hud-lbl">Tools</span>
       <button class="hud-btn hud-toggle-btn" id="btn-operator">Fleet</button>
       <button class="hud-btn hud-toggle-btn hud-toggle-purple" id="btn-mission">Mission</button>
@@ -4460,7 +4460,7 @@
       <button class="hud-btn" id="btn-report">Report</button>
       <button class="hud-btn" id="btn-share">Share</button>
 
-      <!-- Push right -->
+      
       <div style="flex:1;min-width:8px;"></div>
 
       <button class="hud-btn" id="btn-help">Help</button>
@@ -4469,7 +4469,7 @@
     </div>
   </div>
 
-  <!-- ── Active layer dots — fixed top-right corner ─────────────── -->
+  
   <div id="hud-dots">
     <span class="hud-dot-label">Active</span>
     <span class="hud-dot" id="dot-stars"  title="Stars"></span>
@@ -4557,7 +4557,7 @@
     <div id="wp-time-badge" class="wp-time-badge live">● LIVE</div>
     <div class="wp-body">
 
-      <!-- Kp + X-ray flux side by side -->
+      
       <div class="wp-metrics-row">
         <div class="wp-metric-block">
           <div class="wp-label">Kp Index <span class="info-tip" data-tip="Global geomagnetic activity index (0–9). Values ≥5 signal a geomagnetic storm; ≥7 is severe. Derived from magnetometer readings at 13 ground stations worldwide.">?</span></div>
@@ -4581,7 +4581,7 @@
         </div>
       </div>
 
-      <!-- Solar wind + Bz -->
+      
       <div class="wp-stat-row">
         <span class="wp-stat-label">Solar Wind <span class="info-tip" data-tip="Speed of charged particles streaming from the Sun, measured at the L1 point ~1.5M km from Earth. Typical: 350–450 km/s. Elevated (>600 km/s) indicates a fast stream or CME arrival.">?</span></span>
         <span class="wp-stat-val" id="wp-sw-speed">—</span>
@@ -4603,19 +4603,19 @@
         <span class="wp-stat-val" id="wp-alerts">—</span>
       </div>
 
-      <!-- Recent solar flares -->
+      
       <div class="wp-divider"></div>
       <div class="wp-forecast-label">Recent Solar Flares <span class="info-tip" data-tip="Solar X-ray bursts above C-class intensity in the past 7 days. Flares cause immediate HF radio blackouts on Earth's sunlit side. M and X flares are the most impactful.">?</span></div>
       <div id="wp-flares-list">
         <span class="wp-flare-none">Loading…</span>
       </div>
 
-      <!-- System impacts -->
+      
       <div class="wp-divider"></div>
       <div class="wp-forecast-label">System Impacts <span class="info-tip" data-tip="Real-time effects using NOAA official scales. R = HF radio blackout (from flares). S = radiation storm (from solar particles). G = geomagnetic storm (from solar wind/CMEs). Each runs 1–5 by severity.">?</span></div>
       <div id="wp-impacts"></div>
 
-      <!-- 72h Kp forecast + drag risk -->
+      
       <div class="wp-divider"></div>
       <div class="wp-forecast-label">72h Kp Forecast <span class="info-tip" data-tip="Predicted planetary geomagnetic Kp index over the next 72 hours, issued by NOAA Space Weather Prediction Center. Bars show 3-hour windows; color indicates storm level.">?</span></div>
       <div id="wp-forecast-bars"></div>
@@ -4627,7 +4627,7 @@
         <span class="wp-risk-badge none">Loading…</span>
       </div>
 
-      <!-- Updated timestamp -->
+      
       <div class="wp-stat-row" style="margin-top:var(--space-2);border-top:1px solid var(--border-dim);padding-top:4px">
         <span class="wp-stat-label">Updated</span>
         <span id="wp-updated">—</span>
@@ -4771,13 +4771,13 @@
       <button id="sun-panel-close">×</button>
     </div>
 
-    <!-- Tabs -->
+    
     <div class="sun-tabs">
       <button class="sun-tab" data-tab="health">HEALTH</button>
       <button class="sun-tab" data-tab="info">INFO</button>
     </div>
 
-    <!-- SDO live image — shared between both tabs -->
+    
     <div class="sun-sdo-section">
       <div class="sun-sdo-wrap">
         <img id="sun-sdo-img"
@@ -4794,7 +4794,7 @@
       <span id="sun-sdo-credit">AIA 304Å — Chromosphere · NASA/SDO · live</span>
     </div>
 
-    <!-- HEALTH tab body -->
+    
     <div id="sun-body-health">
 
       <div class="sun-h-label">X-Ray Flux <span class="info-tip" data-tip="Solar X-ray output measured by GOES satellites. Classes A→B→C→M→X, each 10× more energetic. X-class flares can black out HF radio on Earth's dayside.">?</span></div>
@@ -4832,7 +4832,7 @@
       </div>
     </div>
 
-    <!-- INFO tab body -->
+    
     <div id="sun-body-info" style="display:none">
       <div class="sun-meta">G2V MAIN SEQUENCE STAR  ·  SOL</div>
       <div class="sun-stats">
@@ -4871,8 +4871,7 @@
   
   <div id="hud-tooltip"><div class="hud-tip-box"></div></div>
 
-
-  <!-- Constellation info panel -->
+  
   <div id="constellation-panel" class="hidden">
     <div id="cp-header">
       <div id="cp-header-left">
@@ -4972,18 +4971,18 @@
     </div>
   </div>
 
-  <!-- ── Powers of Ten overlay ──────────────────────────────────── -->
+  
   <div id="pot-overlay" style="display:none;position:fixed;inset:0;z-index:900;
     flex-direction:column;align-items:center;justify-content:center;
     background:radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.55) 100%);
     pointer-events:none;">
 
-    <!-- ESC hint -->
+    
     <div style="position:absolute;top:20px;right:22px;font-family:var(--font-mono);
       font-size:10px;letter-spacing:0.12em;color:rgba(255,255,255,0.3);
       pointer-events:none;">ESC TO EXIT</div>
 
-    <!-- Badge top-left -->
+    
     <div style="position:absolute;top:18px;left:20px;display:flex;align-items:center;gap:8px;">
       <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);
         box-shadow:0 0 8px var(--accent);"></div>
@@ -4991,7 +4990,7 @@
         color:rgba(255,255,255,0.45);">POWERS OF TEN</span>
     </div>
 
-    <!-- Main label (fades in/out at each waypoint) -->
+    
     <div id="pot-label" style="text-align:center;opacity:0;pointer-events:none;">
       <div id="pot-line1" style="font-family:var(--font-mono);font-size:clamp(18px,2.8vw,32px);
         letter-spacing:0.22em;color:#ffffff;font-weight:300;margin-bottom:10px;
@@ -5000,7 +4999,7 @@
         letter-spacing:0.08em;color:rgba(255,255,255,0.5);font-weight:300;"></div>
     </div>
 
-    <!-- Progress bar -->
+    
     <div style="position:absolute;bottom:0;left:0;right:0;height:2px;
       background:rgba(255,255,255,0.06);">
       <div id="pot-progress-fill" style="height:100%;width:0%;
@@ -5135,7 +5134,7 @@
     </div>
   </div>
 
-  <!-- About Creator panel (standalone) -->
+  
   <div id="about-overlay" class="hidden">
     <div id="about-backdrop"></div>
     <div id="about-card">
@@ -5196,7 +5195,7 @@
   
   <div id="panel-dock"></div>
 
-  <!-- Tooltip portal: positioned via JS, escapes any overflow:auto ancestor -->
+  
   <div id="tip-portal"></div>
 
   <script>

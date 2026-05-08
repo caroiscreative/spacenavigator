@@ -1,5 +1,5 @@
 
-// ── Fleet definitions — order determines display priority ────────────────────
+
 const FLEETS = [
   { id: 'starlink', label: 'Starlink',       operator: 'SpaceX',   color: '#4FC3F7' },
   { id: 'oneweb',   label: 'OneWeb',         operator: 'OneWeb',   color: '#80CBC4' },
@@ -31,7 +31,6 @@ function classifyTle(tle) {
   return 'other';
 }
 
-// Classify a conjunction event participant by its embedded name + category strings
 function classifyByCat(name, cat) {
   if (cat === 'station') return 'station';
   if (cat === 'debris')  return 'debris';
@@ -87,7 +86,7 @@ function weatherImpact(altKm, kp) {
     if (kp >= 5) return { level: 'warning', label: 'Radiation risk', text: 'Radiation belts enhanced. Monitor SEE rates and solar panel degradation.', color: 'var(--amber)' };
     return { level: 'nominal', label: 'Nominal', text: 'Normal MEO radiation environment. No action required.', color: 'var(--green)' };
   }
-  // GEO
+
   if (kp >= 7) return { level: 'severe',  label: 'Surface charging', text: 'Severe geomagnetic storm. Surface charging risk. Uplink interference possible. Ground team alert.', color: 'var(--red)' };
   if (kp >= 5) return { level: 'warning', label: 'Charging risk', text: 'Storm conditions. Minor charging risk. Monitor anomaly logs.', color: 'var(--amber)' };
   if (kp >= 4) return { level: 'caution', label: 'Unsettled', text: 'Mildly unsettled. GEO environment generally stable but monitor.', color: 'var(--yellow)' };
@@ -119,7 +118,6 @@ function shortName(name = '') {
     .slice(0, 18);
 }
 
-// ── Panel factory ─────────────────────────────────────────────────────────────
 export function createOperatorPanel({ onSelectFleet, onClear, onSelectConjunction }) {
   const panel   = document.getElementById('operator-panel');
   const listEl  = document.getElementById('op-list');
@@ -141,16 +139,15 @@ export function createOperatorPanel({ onSelectFleet, onClear, onSelectConjunctio
   });
 
   let _tles        = [];
-  let _tleMap      = new Map();    // norad → tle
-  let _groups      = new Map();    // fleetId → Set<norad>
-  let _conjCounts  = new Map();    // fleetId → number
-  let _conjByFleet = new Map();    // fleetId → [conjunction events]
+  let _tleMap      = new Map();
+  let _groups      = new Map();
+  let _conjCounts  = new Map();
+  let _conjByFleet = new Map();
   let _activeFleet = null;
   let _weatherData = null;
-  let _view        = 'list';       // 'list' | 'detail'
+  let _view        = 'list';
   let _detailFleet = null;
 
-  // ── Data population ──────────────────────────────────────────────────────
   function populate(tles) {
     _tles   = tles;
     _tleMap = new Map(tles.map(t => [t.norad, t]));
@@ -172,7 +169,7 @@ export function createOperatorPanel({ onSelectFleet, onClear, onSelectConjunctio
     for (const ev of conjData) {
       const fa = classifyByCat(ev.nameA, ev.catA);
       const fb = classifyByCat(ev.nameB, ev.catB);
-      // Add event to each involved fleet (deduplicate — don't double-count same fleet)
+
       const seen = new Set();
       for (const fid of [fa, fb]) {
         if (seen.has(fid)) continue;
@@ -190,7 +187,6 @@ export function createOperatorPanel({ onSelectFleet, onClear, onSelectConjunctio
     if (_view === 'detail' && _detailFleet) _renderDetail(_detailFleet);
   }
 
-  // ── List view render ──────────────────────────────────────────────────────
   function _render() {
     if (!listEl) return;
     listEl.innerHTML = '';
@@ -238,7 +234,6 @@ export function createOperatorPanel({ onSelectFleet, onClear, onSelectConjunctio
     }
   }
 
-  // ── Detail / dashboard view ───────────────────────────────────────────────
   function _renderDetail(fleet) {
     if (!listEl) return;
     _view        = 'detail';
@@ -258,7 +253,6 @@ export function createOperatorPanel({ onSelectFleet, onClear, onSelectConjunctio
 
     if (titleEl) titleEl.textContent = `${fleet.label} · ${norads.size.toLocaleString()} sats`;
 
-    // ── Back bar ──────────────────────────────────────────────────────────
     const backBar = document.createElement('div');
     backBar.className = 'op-back-bar';
     backBar.innerHTML = `
@@ -273,7 +267,6 @@ export function createOperatorPanel({ onSelectFleet, onClear, onSelectConjunctio
     });
     listEl.appendChild(backBar);
 
-    // ── Stats strip ───────────────────────────────────────────────────────
     const statsStrip = document.createElement('div');
     statsStrip.className = 'op-stats-strip';
     statsStrip.innerHTML = `
@@ -293,7 +286,6 @@ export function createOperatorPanel({ onSelectFleet, onClear, onSelectConjunctio
       </div>`;
     listEl.appendChild(statsStrip);
 
-    // ── Weather section ───────────────────────────────────────────────────
     const wxSection = document.createElement('div');
     wxSection.className = 'op-section';
     wxSection.innerHTML = `
@@ -313,7 +305,6 @@ export function createOperatorPanel({ onSelectFleet, onClear, onSelectConjunctio
       </div>`;
     listEl.appendChild(wxSection);
 
-    // ── Conjunctions section ──────────────────────────────────────────────
     const conjSection = document.createElement('div');
     conjSection.className = 'op-section';
 
@@ -363,7 +354,6 @@ export function createOperatorPanel({ onSelectFleet, onClear, onSelectConjunctio
     }
     listEl.appendChild(conjSection);
 
-    // ── Satellite roster ──────────────────────────────────────────────────
     const satSection = document.createElement('div');
     satSection.className = 'op-section op-section-last';
 
@@ -375,13 +365,12 @@ export function createOperatorPanel({ onSelectFleet, onClear, onSelectConjunctio
     const rosterEl = document.createElement('div');
     rosterEl.className = 'op-roster';
 
-    // Gather TLE objects for this fleet
     const fleetTles = [];
     for (const norad of norads) {
       const t = _tleMap.get(norad);
       if (t) fleetTles.push(t);
     }
-    // Sort alphabetically; show up to 20
+
     fleetTles.sort((a, b) => a.name.localeCompare(b.name));
     const rosterShown = fleetTles.slice(0, 20);
     rosterShown.forEach(t => {
@@ -409,7 +398,6 @@ export function createOperatorPanel({ onSelectFleet, onClear, onSelectConjunctio
     listEl.appendChild(satSection);
   }
 
-  // ── Panel visibility ──────────────────────────────────────────────────────
   function show() {
     panel.classList.remove('hidden');
   }

@@ -133,7 +133,7 @@ export function createExplorerPanel({ onSelectDso, onSelectStar, getTleData, onS
   const searchInput = panelEl.querySelector('#exp-search-input');
 
   let activeTab   = 'galaxies';
-  let activeGroup = null;   // null = group list view; string = drilled-in group key
+  let activeGroup = null;
 
   panelEl.querySelector('#explorer-close')
     ?.addEventListener('click', hide);
@@ -223,7 +223,7 @@ export function createExplorerPanel({ onSelectDso, onSelectStar, getTleData, onS
         </div>`).join('')}`;
 
     card.addEventListener('click', () => {
-      // Clear selected state from other cards
+
       bodyEl.querySelectorAll('.exp-intl-card.exp-intl-selected')
         .forEach(c => c.classList.remove('exp-intl-selected'));
       card.classList.add('exp-intl-selected');
@@ -342,7 +342,7 @@ export function createExplorerPanel({ onSelectDso, onSelectStar, getTleData, onS
       <span class="exp-back-label" style="color:${meta.color}">${meta.label}</span>
       <button class="exp-select-all-btn">Select All</button>`;
     backEl.querySelector('.exp-back-btn').addEventListener('click', () => {
-      if (onSelectGroup) onSelectGroup(null);  // clear globe highlight
+      if (onSelectGroup) onSelectGroup(null);
       activeGroup = null;
       if (searchInput) searchInput.value = '';
       renderBody();

@@ -1,6 +1,4 @@
 
-// Historical named stars — known since antiquity or named by ancient cultures.
-// RA/Dec in degrees (J2000). Distance in light-years. Magnitude apparent.
 
 function spectralColor(sp) {
   const c = sp[0];

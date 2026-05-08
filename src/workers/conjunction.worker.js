@@ -1,7 +1,7 @@
 
-const SCALE_KM    = 500;           // 1 scene unit = 500 km
-const MIN_KM      = 1.0;           // skip pairs closer than this (docked/same object)
-const WARN_KM     = 100;           // scan threshold
+const SCALE_KM    = 500;
+const MIN_KM      = 1.0;
+const WARN_KM     = 100;
 const WARN_SCENE  = WARN_KM / SCALE_KM;
 
 const CRITICAL_KM = 5;
@@ -13,7 +13,7 @@ self.onmessage = ({ data }) => {
   const { positions, count, tles } = data;
   const t0 = performance.now();
 
-  const ORIGIN_TOL2 = 0.01 * 0.01;   // within 5 km of origin → skip
+  const ORIGIN_TOL2 = 0.01 * 0.01;
   const valid = [];
   for (let i = 0; i < count; i++) {
     const x = positions[i * 3];
@@ -39,7 +39,7 @@ self.onmessage = ({ data }) => {
       const b  = valid[j];
       const bx = positions[b * 3];
 
-      if (bx - ax > WARN_SCENE) break;   // sorted — all further are too far in X
+      if (bx - ax > WARN_SCENE) break;
 
       const dx = ax - bx;
       const dy = ay - positions[b * 3 + 1];
@@ -51,7 +51,7 @@ self.onmessage = ({ data }) => {
 
         if (distKm < MIN_KM) {
           skippedColocated++;
-          continue;   // docked or same object — skip
+          continue;
         }
 
         let risk;

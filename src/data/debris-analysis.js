@@ -1,6 +1,6 @@
 
-const GM      = 3.986004418e5;   // km³ s⁻²
-const R_EARTH = 6371.0;          // km
+const GM      = 3.986004418e5;
+const R_EARTH = 6371.0;
 
 function makeBins() {
   const bins = [];

@@ -1,7 +1,7 @@
 
 const NAVY   = '#0A1628';
 const CYAN   = '#4FC3F7';
-const CYAN_D = '#1E5B7A';   // darker cyan for borders
+const CYAN_D = '#1E5B7A';
 const SKY    = '#90CAF9';
 const GREEN  = '#69F0AE';
 const RED    = '#EF5350';
@@ -181,7 +181,7 @@ function conjunctionTable(conjunctions) {
 }
 
 function distributionTable(stats) {
-  const total = stats.total || 1;   // avoid divide-by-zero
+  const total = stats.total || 1;
 
   const rows = [
     ['Debris / Rocket Bodies', stats.debris,   RED],

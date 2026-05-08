@@ -3,7 +3,7 @@ import * as THREE from 'three/webgpu';
 import { analyzeDensity } from '../data/debris-analysis.js';
 
 const SCALE_KM = 500;
-const R_EARTH  = 6371;   // km
+const R_EARTH  = 6371;
 
 const BASE_OPACITY_MIN = 0.02;
 const BASE_OPACITY_MAX = 0.16;
@@ -27,9 +27,9 @@ export function createDebrisDensity(scene, tles) {
   const maxCount = Math.max(...bins.map(b => b.count));
   console.log(`[DebrisDensity] ${bins.length} non-empty bands, peak ${maxCount} objects`);
 
-  const shellMeshes = [];   // visible wireframe shells
-  const hitMeshes   = [];   // invisible solid spheres for raycasting
-  const binData     = [];   // parallel metadata for tooltip + selection
+  const shellMeshes = [];
+  const hitMeshes   = [];
+  const binData     = [];
 
   const hitMat = new THREE.MeshBasicNodeMaterial({ visible: false });
 
@@ -49,11 +49,11 @@ export function createDebrisDensity(scene, tles) {
       opacity,
       blending:    THREE.AdditiveBlending,
       depthWrite:  false,
-      depthTest:   false,  // always visible over Earth — visualization overlay style
+      depthTest:   false,
     });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.frustumCulled = false;
-    mesh.visible = false;   // hidden until user activates (H key / H HEAT)
+    mesh.visible = false;
     scene.add(mesh);
     shellMeshes.push(mesh);
 
@@ -67,7 +67,7 @@ export function createDebrisDensity(scene, tles) {
     binData.push({ ...bin, color, t });
   }
 
-  const selectedBins = new Set();   // indices of selected shells
+  const selectedBins = new Set();
 
   function _dispatchSelection() {
     window.dispatchEvent(new CustomEvent('density-band-select', {
@@ -165,7 +165,7 @@ export function createDebrisDensity(scene, tles) {
   let _lastBreathTime = 0;
   function update(now) {
     if (!visible) return;
-    if (now - _lastBreathTime < 50) return;   // max 20fps — enough for a slow breathe
+    if (now - _lastBreathTime < 50) return;
     _lastBreathTime = now;
     const breathe = 0.92 + 0.08 * Math.sin(now * 0.0002);
     _applyOpacities(breathe);

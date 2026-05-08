@@ -1,6 +1,5 @@
 
-// Orbital shell definitions with capacity estimates based on published ITU/FCC studies
-// Capacity figures are conservative estimates from academic literature and filing data
+
 const SHELLS = [
   {
     id: 'vleo',
@@ -58,7 +57,7 @@ const SHELLS = [
   },
 ];
 
-const MU_KM3 = 3.986004418e5; // km³/s²
+const MU_KM3 = 3.986004418e5;
 const RE_KM  = 6371;
 
 function periodMin(altKm) {
@@ -162,7 +161,6 @@ export function createCapacityPanel({ onClose } = {}) {
       listEl.appendChild(card);
     }
 
-    // Footer: methodology note
     const footer = document.createElement('div');
     footer.className = 'cap-footer';
     footer.textContent = 'Capacity estimates based on ITU filing data and published orbital congestion studies. Values are indicative, not regulatory limits.';

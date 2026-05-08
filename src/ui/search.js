@@ -1,7 +1,6 @@
 
 import { CONSTELLATION_CATALOG } from '../layers/constellations.js';
 
-// Pre-build flat array for constellation search (built once at module load)
 const CONST_LIST = Object.entries(CONSTELLATION_CATALOG).map(([abbr, info]) => ({
   abbr,
   name:    info.name,
@@ -10,15 +9,6 @@ const CONST_LIST = Object.entries(CONSTELLATION_CATALOG).map(([abbr, info]) => (
   kind:    'constellation',
 }));
 
-/**
- * @param {function}  getTleData                 () → TLE array
- * @param {function}  onSelect                   (idx, tle) — satellite selected
- * @param {function}  flyTo                      (dist) — fly to sat
- * @param {object}    [skyOpts]
- * @param {function}  [skyOpts.getSkyObjects]    () → DSO array (ALL_DSOS)
- * @param {function}  [skyOpts.onSelectDso]      (dso)
- * @param {function}  [skyOpts.onSelectConstellation] (abbr)
- */
 export function createSearch(getTleData, onSelect, flyTo, skyOpts = {}) {
   const overlay = document.getElementById('search-overlay');
   const input   = document.getElementById('search-input');
@@ -46,9 +36,8 @@ export function createSearch(getTleData, onSelect, flyTo, skyOpts = {}) {
     if (!raw) { results.innerHTML = ''; return; }
 
     const q = raw.toLowerCase();
-    const items = [];   // { kind, label, sub, data }
+    const items = [];
 
-    // 1 — Satellites (up to 6)
     const tles = getTleData();
     for (let i = 0; i < tles.length && items.length < 6; i++) {
       const tle = tles[i];
@@ -63,7 +52,6 @@ export function createSearch(getTleData, onSelect, flyTo, skyOpts = {}) {
       }
     }
 
-    // 2 — Star clusters + DSOs (up to 4 more)
     if (skyOpts.getSkyObjects) {
       const dsos = skyOpts.getSkyObjects();
       for (const dso of dsos) {
@@ -80,11 +68,10 @@ export function createSearch(getTleData, onSelect, flyTo, skyOpts = {}) {
       }
     }
 
-    // 3 — Constellations (up to 4 more, prefer prefix matches)
     const constHits = CONST_LIST.filter(c =>
       c.nameLow.includes(q) || c.abbrLow === q
     ).sort((a, b) => {
-      // Exact-start matches float to top
+
       const aStart = a.nameLow.startsWith(q) ? 0 : 1;
       const bStart = b.nameLow.startsWith(q) ? 0 : 1;
       return aStart - bStart;
@@ -110,7 +97,6 @@ export function createSearch(getTleData, onSelect, flyTo, skyOpts = {}) {
       const li = document.createElement('li');
       li.dataset.label = item.label;
 
-      // Type badge
       const badge = document.createElement('span');
       badge.style.cssText = 'opacity:0.4; font-size:11px; margin-left:5px; text-transform:uppercase;';
 

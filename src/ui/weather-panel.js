@@ -24,8 +24,6 @@ export function createWeatherPanel(spaceWeather) {
     return { show: () => {}, hide: () => {}, toggle: () => false, isVisible: () => false, updateForecast: () => {} };
   }
 
-  // ── Color helpers ──────────────────────────────────────────────────
-
   function kpColor(kp) {
     if (kp === null) return '#888';
     if (kp >= 7)     return '#FF1744';
@@ -44,7 +42,6 @@ export function createWeatherPanel(spaceWeather) {
     }
   }
 
-  // NOAA scale level → color (0=green, 1=yellow, 2=orange, 3+=red)
   function scaleColor(level) {
     if (!level || level === 0) return '#69F0AE';
     if (level === 1)           return '#FFCA28';
@@ -61,7 +58,6 @@ export function createWeatherPanel(spaceWeather) {
     return 'A' + (flux / 1e-8).toFixed(1);
   }
 
-  // Log scale: A1 (1e-8) = 0%, X10 (1e-3) = 100%
   function xrayBarPct(flux) {
     if (!flux || flux <= 0) return 0;
     const logMin = -8, logMax = -3;
@@ -95,7 +91,6 @@ export function createWeatherPanel(spaceWeather) {
     return '#FF1744';
   }
 
-  // LEO satellite drag — driven by Kp
   function kpToDragImpact(kp) {
     if (kp === null || kp < 3) return { status: 'Normal', color: '#69F0AE' };
     if (kp < 5)                return { status: 'Elevated', color: '#FFCA28' };
@@ -103,7 +98,6 @@ export function createWeatherPanel(spaceWeather) {
     return                            { status: 'Extreme', color: '#FF1744' };
   }
 
-  // GEO/HEO surface charging — Kp + southward Bz
   function kpToChargingImpact(kp, bzNT) {
     const southward = bzNT !== null && bzNT < -10;
     if (kp === null || kp < 4) return { status: 'Low risk', color: '#69F0AE' };
@@ -111,7 +105,6 @@ export function createWeatherPanel(spaceWeather) {
     return                            { status: 'High risk (GEO/HEO)', color: '#FF1744' };
   }
 
-  // Flare class → compact radio effect
   function flareToRadioLabel(cls) {
     if (!cls || cls === '—') return null;
     const letter = cls[0].toUpperCase();
@@ -129,8 +122,6 @@ export function createWeatherPanel(spaceWeather) {
     if (ageHrs < 24) return `${ageHrs}h ago`;
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   }
-
-  // ── Section renders ────────────────────────────────────────────────
 
   function renderFlares(recentFlares) {
     if (!flaresEl) return;
@@ -156,15 +147,10 @@ export function createWeatherPanel(spaceWeather) {
     }).join('');
   }
 
-  /**
-   * Renders system impacts using official NOAA R/S/G scales + satellite-specific impacts.
-   * R = Radio Blackout, S = Radiation Storm, G = Geomagnetic Storm.
-   */
   function renderImpacts(data) {
     if (!impactsEl) return;
     const sc = data.noaaScales ?? {};
 
-    // Tooltip definitions for each impact row
     const SCALE_TIPS = {
       R: 'HF radio disruption on Earth\'s sunlit side, caused by X-ray bursts from solar flares. R1=minor degradation. R5=complete blackout for hours.',
       S: 'High-energy proton bombardment from solar particle events. Can damage satellite electronics and pose radiation risk to astronauts. S1–S5.',
@@ -175,7 +161,6 @@ export function createWeatherPanel(spaceWeather) {
       'GEO Charging': 'During storms, energetic electrons accumulate on geostationary satellite surfaces (~35,786 km), risking electrostatic discharge and electronics damage.',
     };
 
-    // NOAA R/S/G scale rows with 24h forecast probability
     function scaleRow(badge, label, level, text, forecastHtml) {
       const col = scaleColor(level);
       const badgeStyle = `background:${col}18;color:${col};border:1px solid ${col}40`;
@@ -199,15 +184,14 @@ export function createWeatherPanel(spaceWeather) {
       </div>`;
     }
 
-    // R-scale: radio blackouts (driven by X-ray flux)
     const rForecast = sc.R24hMinorProb > 0
       ? `${sc.R24hMinorProb}% minor / ${sc.R24hMajorProb}% major in 24h`
       : null;
-    // S-scale: radiation storms (proton events)
+
     const sForecast = sc.S24hProb > 0
       ? `${sc.S24hProb}% prob in 24h`
       : null;
-    // G-scale: geomagnetic storms
+
     const gForecast = sc.G24h > 0
       ? `G${sc.G24h} ${sc.G24hText ?? ''} expected 24h`
       : null;
@@ -231,10 +215,9 @@ export function createWeatherPanel(spaceWeather) {
     const color = kpColor(kp);
     const pct   = kp !== null ? Math.min(kp / 9, 1) * 100 : 0;
 
-    // ── Time badge ────────────────────────────────────────────────
     if (timeBadgeEl) {
       if (data.isLive === false && data.histTime) {
-        // Historical snapshot
+
         const d = data.histTime;
         const label = d.toLocaleString([], {
           month: 'short', day: 'numeric',
@@ -251,7 +234,6 @@ export function createWeatherPanel(spaceWeather) {
       }
     }
 
-    // Kp
     if (kpValue)   kpValue.textContent = kp !== null ? kp.toFixed(1) : '—';
     if (kpBar)    { kpBar.style.width = `${pct}%`; kpBar.style.background = color; }
     if (kpClassEl) {
@@ -260,7 +242,6 @@ export function createWeatherPanel(spaceWeather) {
       kpClassEl.style.color = kp !== null ? color : '#888';
     }
 
-    // X-ray flux
     if (xrayValue) xrayValue.textContent = xrayFluxLabel(data.xrayFlux);
     if (xrayBar) {
       xrayBar.style.width      = `${xrayBarPct(data.xrayFlux)}%`;
@@ -268,7 +249,6 @@ export function createWeatherPanel(spaceWeather) {
     }
     if (xrayClsEl) { xrayClsEl.textContent = data.xrayClass; xrayClsEl.style.color = xrayColor(data.xrayClass); }
 
-    // Solar wind speed
     if (swSpeedEl) {
       swSpeedEl.textContent = data.solarWindSpeed !== null
         ? `${Math.round(data.solarWindSpeed)} km/s`
@@ -277,7 +257,6 @@ export function createWeatherPanel(spaceWeather) {
         ? '#FF6D00' : 'var(--text-secondary)';
     }
 
-    // IMF Bz (southward = geoeffective)
     if (bzEl) {
       const bz = data.bzNT;
       if (bz !== null) {
@@ -291,16 +270,13 @@ export function createWeatherPanel(spaceWeather) {
       }
     }
 
-    // Solar Flux Index
     if (sfiEl) {
       sfiEl.textContent = sfiLabel(data.sfi);
       sfiEl.style.color = sfiColor(data.sfi);
     }
 
-    // Aurora
     if (auroraEl) auroraEl.textContent = kpToAurora(kp);
 
-    // Alerts (only meaningful for live data)
     if (alertsEl) {
       if (data.isLive === false && !data.historicalUnavailable) {
         alertsEl.textContent = '—';
@@ -312,10 +288,9 @@ export function createWeatherPanel(spaceWeather) {
       }
     }
 
-    // Updated
     if (updatedEl) {
       if (data.isLive === false && data.histTime) {
-        // For historical view, show the simTime being viewed, not the fetch time
+
         updatedEl.textContent = data.histTime.toLocaleTimeString([], {
           hour: '2-digit', minute: '2-digit',
         });
@@ -329,7 +304,6 @@ export function createWeatherPanel(spaceWeather) {
     renderFlares(data.recentFlares);
     renderImpacts(data);
 
-    // Storm border pulse
     if (panel) panel.classList.toggle('weather-storm', kp !== null && kp >= 5);
   }
 
@@ -383,10 +357,6 @@ export function createWeatherPanel(spaceWeather) {
   function toggle()    { panel.classList.toggle('visible'); return panel.classList.contains('visible'); }
   function isVisible() { return panel.classList.contains('visible'); }
 
-  /**
-   * Render a specific weather snapshot (e.g. from spaceWeather.getAtTime()).
-   * Call this when the simulation time changes to show historical conditions.
-   */
   function renderData(data) { render(data); }
 
   return { show, hide, toggle, isVisible, updateForecast, renderData };

@@ -1,21 +1,11 @@
 
-/**
- * SpaceNavigator — UI Sound Engine
- * Synthesized entirely via Web Audio API — no external files.
- *
- * BROWSER RULE: AudioContext must be created/resumed AFTER a user gesture.
- * We handle this by:
- *  1. Calling prime() on first click/keydown in main.js.
- *  2. Calling _ctx.resume() at the top of every play() call.
- */
 
-const MASTER_VOL = 0.65;   // raised — browsers compress audio, needs headroom
+const MASTER_VOL = 0.65;
 
 let _ctx     = null;
 let _master  = null;
 let _enabled = true;
 
-// ── AudioContext bootstrap ────────────────────────────────────────────────────
 function boot() {
   if (_ctx) return;
   _ctx    = new (window.AudioContext || window.webkitAudioContext)();
@@ -28,7 +18,7 @@ function play(fn) {
   if (!_enabled) return;
   try {
     boot();
-    // Resume if browser auto-suspended (common on page load)
+
     const go = () => { try { fn(_ctx, _master); } catch (_) {} };
     if (_ctx.state === 'suspended') {
       _ctx.resume().then(go);
@@ -38,7 +28,6 @@ function play(fn) {
   } catch (_) {}
 }
 
-// ── Tiny DSP helpers ──────────────────────────────────────────────────────────
 function mkOsc(ctx, type, freq) {
   const o = ctx.createOscillator();
   o.type = type; o.frequency.value = freq;
@@ -49,14 +38,12 @@ function mkGain(ctx, val = 0) {
   const g = ctx.createGain(); g.gain.value = val; return g;
 }
 
-// Attack → peak → exponential release
 function env(g, peak, attack, total, now) {
   g.gain.setValueAtTime(0, now);
   g.gain.linearRampToValueAtTime(peak, now + attack);
   g.gain.exponentialRampToValueAtTime(0.0001, now + total);
 }
 
-// White-noise buffer (shared, created once per session)
 let _noiseBuf = null;
 function noiseBuf(ctx) {
   if (_noiseBuf && _noiseBuf.sampleRate === ctx.sampleRate) return _noiseBuf;
@@ -67,21 +54,12 @@ function noiseBuf(ctx) {
   return _noiseBuf;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  SOUNDS
-// ─────────────────────────────────────────────────────────────────────────────
-
 export function createUISounds() {
 
-  /**
-   * hover — ficha / token click
-   * Tiny percussive tick, like a poker chip or key switch.
-   * Very short, neutral pitch. High repetition-friendly.
-   */
   function hover() {
     play((ctx, out) => {
       const now = ctx.currentTime;
-      // Impulse: very short bandpass noise burst
+
       const src = ctx.createBufferSource();
       src.buffer = noiseBuf(ctx);
       const flt  = ctx.createBiquadFilter();
@@ -95,10 +73,6 @@ export function createUISounds() {
     });
   }
 
-  /**
-   * select — ascending ping
-   * Satellite or object clicked.
-   */
   function select() {
     play((ctx, out) => {
       const now = ctx.currentTime;
@@ -111,10 +85,6 @@ export function createUISounds() {
     });
   }
 
-  /**
-   * toggle — short square click
-   * HUD layer on/off.
-   */
   function toggle() {
     play((ctx, out) => {
       const now = ctx.currentTime;
@@ -128,10 +98,6 @@ export function createUISounds() {
     });
   }
 
-  /**
-   * open — upward sweep
-   * Panel slides into view.
-   */
   function open() {
     play((ctx, out) => {
       const now = ctx.currentTime;
@@ -144,10 +110,6 @@ export function createUISounds() {
     });
   }
 
-  /**
-   * close — downward sweep
-   * Panel dismissed.
-   */
   function close() {
     play((ctx, out) => {
       const now = ctx.currentTime;
@@ -160,15 +122,10 @@ export function createUISounds() {
     });
   }
 
-  /**
-   * flyTo — warp whoosh
-   * Camera jumps to a target.
-   */
   function flyTo() {
     play((ctx, out) => {
       const now = ctx.currentTime;
 
-      // Rising noise whoosh
       const src = ctx.createBufferSource();
       src.buffer = noiseBuf(ctx);
       const flt  = ctx.createBiquadFilter();
@@ -181,7 +138,6 @@ export function createUISounds() {
       src.connect(flt); flt.connect(gn); gn.connect(out);
       src.start(now); src.stop(now + 0.38);
 
-      // Tone sweep underneath
       const o  = mkOsc(ctx, 'sine', 100);
       const g2 = mkGain(ctx);
       o.frequency.exponentialRampToValueAtTime(900, now + 0.24);
@@ -191,10 +147,6 @@ export function createUISounds() {
     });
   }
 
-  /**
-   * conjWarning — double beep
-   * Warning-level conjunction event selected.
-   */
   function conjWarning() {
     play((ctx, out) => {
       const now = ctx.currentTime;
@@ -208,10 +160,6 @@ export function createUISounds() {
     });
   }
 
-  /**
-   * conjCritical — triple sawtooth burst
-   * Critical conjunction — urgent alert character.
-   */
   function conjCritical() {
     play((ctx, out) => {
       const now = ctx.currentTime;
@@ -227,10 +175,6 @@ export function createUISounds() {
     });
   }
 
-  /**
-   * info — soft chime
-   * Planet / galaxy / DSO info panel opens.
-   */
   function info() {
     play((ctx, out) => {
       const now = ctx.currentTime;
@@ -245,7 +189,6 @@ export function createUISounds() {
     });
   }
 
-  // ── Public API ──────────────────────────────────────────────────────────────
   return {
     hover,
     select,
@@ -263,11 +206,7 @@ export function createUISounds() {
       boot();
       _master.gain.linearRampToValueAtTime(Math.max(0, Math.min(1, v)), _ctx.currentTime + 0.05);
     },
-    /**
-     * prime() — call once on first user interaction (click / keydown).
-     * This creates and immediately resumes the AudioContext so subsequent
-     * sounds play without delay.
-     */
+
     prime() {
       try {
         boot();

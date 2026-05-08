@@ -2,25 +2,25 @@
 import * as THREE from 'three/webgpu';
 
 const DEG        = Math.PI / 180;
-const AU_SCENE   = 650;                        // scene units per AU (matches sun.js)
-const MU_SUN     = 2.959122082855911e-4;        // AU³/day²  (Gaussian GM)
-const JD_UNIX    = 2440587.5;                   // JD of Unix epoch (1970-01-01)
+const AU_SCENE   = 650;
+const MU_SUN     = 2.959122082855911e-4;
+const JD_UNIX    = 2440587.5;
 const MS_PER_DAY = 86_400_000;
 
 const SUN_DIR  = new THREE.Vector3(0.75, 0.18, 0.64).normalize();
-const SUN_DIST = 650;   // scene units
+const SUN_DIST = 650;
 
 const INTERSTELLAR_OBJECTS = [
   {
     id:    'oumuamua',
     name:  "1I/ʻOumuamua",
-    color: '#CE93D8',                          // lavender purple
-    a:  1.27924,      // AU  (always positive — physical semi-transverse axis)
+    color: '#CE93D8',
+    a:  1.27924,
     e:  1.20113,
-    i:  122.7417 * DEG,   // inclination
-    O:   24.5974 * DEG,   // Ω  longitude of ascending node
-    w:  241.8105 * DEG,   // ω  argument of perihelion
-    tpJD: 2458005.978,    // JD 2017-Sep-09 11:29 UTC
+    i:  122.7417 * DEG,
+    O:   24.5974 * DEG,
+    w:  241.8105 * DEG,
+    tpJD: 2458005.978,
     winStart: new Date('2017-08-01T00:00:00Z').getTime(),
     winEnd:   new Date('2018-03-31T00:00:00Z').getTime(),
     hRange: [-2.6, 2.6],
@@ -35,13 +35,13 @@ const INTERSTELLAR_OBJECTS = [
   {
     id:    'borisov',
     name:  '2I/Borisov',
-    color: '#80DEEA',                          // cyan teal
+    color: '#80DEEA',
     a:  0.852,
     e:  3.3564,
     i:  44.0516 * DEG,
     O: 308.1499 * DEG,
     w: 209.1241 * DEG,
-    tpJD: 2458825.765,    // JD 2019-Dec-08 06:21 UTC
+    tpJD: 2458825.765,
     winStart: new Date('2019-09-01T00:00:00Z').getTime(),
     winEnd:   new Date('2020-06-30T00:00:00Z').getTime(),
     hRange: [-1.8, 1.8],
@@ -56,12 +56,12 @@ const INTERSTELLAR_OBJECTS = [
   {
     id:    'atlas',
     name:  '3I/ATLAS',
-    color: '#FFB74D',                          // amber orange
-    a:  0.25934,      // AU
+    color: '#FFB74D',
+    a:  0.25934,
     e:  6.320503,
-    i:  175.12093 * DEG,   // inclination — nearly retrograde
-    O:  322.34889 * DEG,   // Ω  longitude of ascending node
-    w:  127.77350 * DEG,   // ω  argument of perihelion
+    i:  175.12093 * DEG,
+    O:  322.34889 * DEG,
+    w:  127.77350 * DEG,
     tpJD: 2460977.60275,
     winStart: new Date('2025-06-01T00:00:00Z').getTime(),
     winEnd:   new Date('2026-07-31T00:00:00Z').getTime(),
@@ -94,21 +94,21 @@ function solveKepler(Mh, e) {
 
 function eclipticPos(obj, simTimeMs) {
   const { a, e, i, O, w, tpJD } = obj;
-  const dt_days = msToJd(simTimeMs) - tpJD;          // days since perihelion
-  const n   = Math.sqrt(MU_SUN / (a * a * a));        // mean motion rad/day
-  const Mh  = n * dt_days;                             // hyperbolic mean anomaly
-  const H   = solveKepler(Mh, e);                     // hyperbolic anomaly
+  const dt_days = msToJd(simTimeMs) - tpJD;
+  const n   = Math.sqrt(MU_SUN / (a * a * a));
+  const Mh  = n * dt_days;
+  const H   = solveKepler(Mh, e);
 
   return eclipticFromH(obj, H);
 }
 
 function eclipticFromH(obj, H) {
   const { a, e, i, O, w } = obj;
-  const p  = a * (e * e - 1);                         // semi-latus rectum (AU)
+  const p  = a * (e * e - 1);
   const f  = 2 * Math.atan(Math.sqrt((e + 1) / (e - 1)) * Math.tanh(H / 2));
   const r  = p / (1 + e * Math.cos(f));
 
-  const xp = r * Math.cos(f);                         // perifocal frame
+  const xp = r * Math.cos(f);
   const yp = r * Math.sin(f);
 
   const cO = Math.cos(O), sO = Math.sin(O);
@@ -125,8 +125,8 @@ function eclipticFromH(obj, H) {
 function eclipticToScene(ecl, sunPos) {
   return new THREE.Vector3(
     sunPos.x + ecl.x * AU_SCENE,
-    sunPos.y + ecl.z * AU_SCENE,   // ecliptic Z (north) → scene Y (up)
-    sunPos.z - ecl.y * AU_SCENE,   // ecliptic Y negated → scene Z
+    sunPos.y + ecl.z * AU_SCENE,
+    sunPos.z - ecl.y * AU_SCENE,
   );
 }
 
@@ -279,8 +279,6 @@ export function createInterstellarLayer(scene) {
     layerGroup.visible = v;
   }
 
-  // Returns scene-space THREE.Vector3 for the given object id at simTimeMs.
-  // Falls back to perihelion (H=0) if outside the active window or on error.
   function getScenePos(id, simTimeMs) {
     const ref = refs.find(r => r.obj.id === id);
     if (!ref) return null;
@@ -289,14 +287,13 @@ export function createInterstellarLayer(scene) {
     try {
       const ecl = inWindow
         ? eclipticPos(obj, simTimeMs)
-        : eclipticFromH(obj, 0);          // perihelion
+        : eclipticFromH(obj, 0);
       return eclipticToScene(ecl, sunPos);
     } catch {
       return eclipticToScene(eclipticFromH(obj, 0), sunPos);
     }
   }
 
-  // Returns the perihelion timestamp (ms) for the given object id.
   function getPerihelionMs(id) {
     const ref = refs.find(r => r.obj.id === id);
     return ref ? jdToMs(ref.obj.tpJD) : null;

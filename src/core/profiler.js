@@ -1,10 +1,10 @@
 
-const WINDOW    = 60;       // rolling sample count (60 frames ≈ 1 s at 60 fps)
-const REFRESH_MS = 400;     // panel text refresh interval
+const WINDOW    = 60;
+const REFRESH_MS = 400;
 
-const _starts  = {};                          // { name: performance.now() }
-const _buffers = {};                          // { name: Float32Array(WINDOW) }
-let   _renderer = null;                       // THREE renderer reference (optional)
+const _starts  = {};
+const _buffers = {};
+let   _renderer = null;
 let   _visible  = false;
 let   _lastRefresh = 0;
 
@@ -40,10 +40,10 @@ function _avg(name) {
 }
 
 function _color(ms) {
-  if (ms < 4)  return '#4fc3f7';   // blue  — excellent
-  if (ms < 8)  return '#81c784';   // green — good
-  if (ms < 12) return '#ffb74d';   // amber — ok
-  return '#ef5350';                // red   — over budget
+  if (ms < 4)  return '#4fc3f7';
+  if (ms < 8)  return '#81c784';
+  if (ms < 12) return '#ffb74d';
+  return '#ef5350';
 }
 
 function _bar(ms, maxMs = 16) {
@@ -111,7 +111,7 @@ export function tick(now) {
   const rows = SYSTEMS
     .map(([key, label]) => {
       const ms = _avg(key);
-      if (ms < 0.01) return null;  // skip idle systems
+      if (ms < 0.01) return null;
       const c = _color(ms);
       return `  ${label}  <span style="color:${c}">${_fmt(ms)} ms</span>`;
     })
@@ -140,7 +140,7 @@ export function tick(now) {
 export function toggle() {
   _visible = !_visible;
   _panel.style.display = _visible ? 'block' : 'none';
-  if (_visible) _lastRefresh = 0;   // force immediate refresh
+  if (_visible) _lastRefresh = 0;
   return _visible;
 }
 

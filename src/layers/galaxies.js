@@ -2,22 +2,19 @@
 import * as THREE from 'three/webgpu';
 import { ALL_DSOS, DSO_TYPES } from '../data/galaxy-catalog.js';
 
-const SKY_RADIUS  = 9e4;          // must match hyg-loader.js SKY_RADIUS
+const SKY_RADIUS  = 9e4;
 const DEG         = Math.PI / 180;
-const TEX_SIZE    = 128;          // canvas texture resolution — 128 is sharp enough at sky distances
+const TEX_SIZE    = 128;
 
 const DEG_TO_SCENE = SKY_RADIUS * DEG;
 
 const SPRITE_MIN  = 400;
-const SPRITE_MAX  = 16000;   // hard cap — keeps very large-angular objects (LMC, SMC) sane
-const SPRITE_MAX_LARGE = 8000;  // stricter cap for objects > 2° angular size
+const SPRITE_MAX  = 16000;
+const SPRITE_MAX_LARGE = 8000;
 
 const BASE_OPACITY      = 0.85;
-const BASE_OPACITY_REAL = 0.92;   // slightly higher for real Hubble/JWST images
+const BASE_OPACITY_REAL = 0.92;
 
-// ── Real-image texture loader ────────────────────────────────────────────────
-// Loads a remote image (Hubble, JWST, ESO) and swaps it into the sprite material.
-// Starts with the procedural texture; upgrades asynchronously when the image loads.
 const _texLoader = new THREE.TextureLoader();
 _texLoader.crossOrigin = 'anonymous';
 
@@ -59,7 +56,7 @@ function makeTexture(drawFn) {
   canvas.width = canvas.height = TEX_SIZE;
   const ctx    = canvas.getContext('2d');
   drawFn(ctx, canvas);
-  const tex = new THREE.Texture(canvas);  // NOT CanvasTexture — one-time upload only
+  const tex = new THREE.Texture(canvas);
   tex.needsUpdate = true;
   return tex;
 }
@@ -76,7 +73,7 @@ function makeSpiralTexture(color, tilt = 0) {
     halo.addColorStop(1,   `rgba(${rr},${gg},${bb},0.0)`);
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.scale(1, 0.48);   // flatten to simulate edge-on tilt
+    ctx.scale(1, 0.48);
     ctx.translate(-cx, -cy);
     ctx.fillStyle = halo;
     ctx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
@@ -335,7 +332,7 @@ function makeBlackholeTexture(color) {
 
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.scale(1.0, 0.38);   // flatten to disk angle
+    ctx.scale(1.0, 0.38);
     const diskR   = r * 0.42;
     const diskW   = r * 0.18;
     for (let i = 0; i < 3; i++) {
@@ -498,10 +495,9 @@ export function createGalaxyLayer(scene) {
     const sprite = new THREE.Sprite(material);
 
     const dir  = eqToScene(dso.ra, dso.dec);
-    const dist = SKY_RADIUS * 0.97;   // slightly inside star sphere to avoid z-fighting
+    const dist = SKY_RADIUS * 0.97;
     sprite.position.copy(dir.multiplyScalar(dist));
 
-    // Size: cap large-angular objects more aggressively — LMC/SMC/Andromeda look like blobs at full size
     const isLarge   = dso.angularDeg > 2.0;
     const cap       = isLarge ? SPRITE_MAX_LARGE : SPRITE_MAX;
     const sizeScale = dso.imageUrl ? 1.8 : 1.5;
@@ -513,7 +509,6 @@ export function createGalaxyLayer(scene) {
     sprite.userData.dso = dso;
     group.add(sprite);
 
-    // Async swap: load real Hubble/JWST image and replace procedural texture
     if (dso.imageUrl) {
       loadRealTexture(dso.imageUrl, tex => {
         material.map     = tex;
@@ -529,10 +524,10 @@ export function createGalaxyLayer(scene) {
   function pick(mx, my, camera, canvas) {
     if (!group.visible) return null;
     const W = canvas.clientWidth, H = canvas.clientHeight;
-    let best = null, bestD2 = 40 * 40;   // 40px threshold
+    let best = null, bestD2 = 40 * 40;
     for (const ref of refs) {
       _projected.copy(ref.worldPos).project(camera);
-      if (_projected.z > 1) continue;  // behind camera
+      if (_projected.z > 1) continue;
       const sx = (_projected.x  + 1) / 2 * W;
       const sy = (-_projected.y + 1) / 2 * H;
       const d2 = (sx - mx) ** 2 + (sy - my) ** 2;
@@ -545,7 +540,7 @@ export function createGalaxyLayer(scene) {
     const ref = refs.find(r => r.dso === dso);
     if (!ref) return null;
     _projected.copy(ref.worldPos).project(camera);
-    if (_projected.z > 1) return null;   // behind camera
+    if (_projected.z > 1) return null;
     const W = canvas.clientWidth, H = canvas.clientHeight;
     const sx = (_projected.x  + 1) / 2 * W;
     const sy = (-_projected.y + 1) / 2 * H;

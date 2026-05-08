@@ -11,7 +11,7 @@ export function createRiskPanel({ onSelect } = {}) {
   }
 
   let currentConjunctions = [];
-  let selectedEntry       = null;   // currently highlighted .risk-entry element
+  let selectedEntry       = null;
 
   listEl.addEventListener('click', e => {
     const entry = e.target.closest('[data-conj-idx]');

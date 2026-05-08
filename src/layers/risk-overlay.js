@@ -4,22 +4,22 @@ import * as THREE from 'three/webgpu';
 const MAX_PAIRS         = 20;
 const SCAN_INTERVAL_MS  = 15_000;
 
-const GM_SCENE = 3.986e5 / (500 * 500 * 500);   // ≈ 3.189e-3
+const GM_SCENE = 3.986e5 / (500 * 500 * 500);
 
 const TRAJ_SECONDS = 60;
 
-const TCA_MAX_SECONDS = 7_200;   // 2 hours
+const TCA_MAX_SECONDS = 7_200;
 
 const RISK_RGB = {
-  critical: [1.000, 0.090, 0.267],   // #FF1744
-  warning:  [1.000, 0.427, 0.000],   // #FF6D00
-  caution:  [1.000, 0.839, 0.000],   // #FFD600
+  critical: [1.000, 0.090, 0.267],
+  warning:  [1.000, 0.427, 0.000],
+  caution:  [1.000, 0.839, 0.000],
 };
 
 function approxVelocity(px, py, pz) {
   const r      = Math.sqrt(px * px + py * py + pz * pz);
   if (r < 1e-6) return [0, 0, 0];
-  const speed  = Math.sqrt(GM_SCENE / r);          // scene units/s
+  const speed  = Math.sqrt(GM_SCENE / r);
   const eqLen  = Math.sqrt(pz * pz + px * px);
   if (eqLen < 1e-6) return [0, 0, 0];
   return [-pz / eqLen * speed, 0, px / eqLen * speed];
@@ -76,7 +76,7 @@ export function createRiskOverlay(scene, satelliteLayer) {
     const ca  = new THREE.BufferAttribute(col, 3);
     pa.setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('position', pa);
-    geo.setAttribute('color',    ca);   // BufferAttribute, not the raw Float32Array
+    geo.setAttribute('color',    ca);
     geo.setDrawRange(0, 0);
     const mat = new THREE.PointsNodeMaterial({
       vertexColors: true, size: 6, sizeAttenuation: false,
@@ -151,7 +151,7 @@ export function createRiskOverlay(scene, satelliteLayer) {
       }
     }
     trajLines.colAttr.needsUpdate = true;
-    trajLines.geo.setDrawRange(0, n * 2 * 2);   // n pairs × 2 sats × 2 vertices
+    trajLines.geo.setDrawRange(0, n * 2 * 2);
 
     tcaDots.geo.setDrawRange(0, n);
   }
@@ -169,9 +169,6 @@ export function createRiskOverlay(scene, satelliteLayer) {
     worker.postMessage({ type: 'scan', positions: positions.slice(), count, tles });
   }
 
-  // Public: tick a background scan even when the visual overlay is hidden.
-  // Called by the operator dashboard so conjunction data stays fresh regardless
-  // of hudRiskActive or camera zoom level.
   function tickScan(now) {
     if (satelliteLayer && now - lastScanTime >= SCAN_INTERVAL_MS) {
       triggerScan(now);
@@ -224,7 +221,7 @@ export function createRiskOverlay(scene, satelliteLayer) {
       const dvx = vAx - vBx, dvy = vAy - vBy, dvz = vAz - vBz;
       const dv2 = dvx*dvx + dvy*dvy + dvz*dvz;
 
-      let tcaX = (ax+bx)*0.5, tcaY = (ay+by)*0.5, tcaZ = (az+bz)*0.5;  // fallback: midpoint now
+      let tcaX = (ax+bx)*0.5, tcaY = (ay+by)*0.5, tcaZ = (az+bz)*0.5;
       c._tcaSec    = null;
       c._tcaDistKm = null;
       if (dv2 > 1e-12) {

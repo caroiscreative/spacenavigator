@@ -57,7 +57,7 @@ export async function fetchTLEs({ forceRefresh = false } = {}) {
 }
 
 async function fetchAllGroups(cache) {
-  const BATCH = 6;   // small groups can tolerate higher concurrency
+  const BATCH = 6;
   const results = [];
 
   for (let i = 0; i < GROUPS.length; i += BATCH) {
@@ -147,7 +147,7 @@ function mergeAndDedup(groupArrays) {
 
   for (const group of groupArrays) {
     for (const sat of group) {
-      byNorad.set(sat.norad, sat);  // last write wins
+      byNorad.set(sat.norad, sat);
     }
   }
 

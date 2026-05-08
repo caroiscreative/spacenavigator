@@ -44,10 +44,10 @@ function handlePropagate(timestamp) {
       const result = propagate(rec, date);
 
       if (result.position && result.position !== false) {
-        const { x, y, z } = result.position;   // ECI km
-        positions[idx * 3]     =  x / 500;       // → scene units (1 u = 500 km)
-        positions[idx * 3 + 1] =  z / 500;       // ECI z = north pole = Three.js +Y
-        positions[idx * 3 + 2] = -y / 500;       // ECI y → Three.js -Z
+        const { x, y, z } = result.position;
+        positions[idx * 3]     =  x / 500;
+        positions[idx * 3 + 1] =  z / 500;
+        positions[idx * 3 + 2] = -y / 500;
       }
     } catch {
     }

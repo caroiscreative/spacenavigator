@@ -154,17 +154,17 @@ export const POPULATION_DATA = [
   { year: 2000, total: 9200,  active: 860, debris: 8340 },
   { year: 2002, total: 9400,  active: 890, debris: 8510 },
   { year: 2005, total: 10500, active: 930, debris: 9570 },
-  { year: 2007, total: 14000, active: 960, debris: 13040 },  // Fengyun spike
+  { year: 2007, total: 14000, active: 960, debris: 13040 },
   { year: 2008, total: 14200, active: 980, debris: 13220 },
-  { year: 2009, total: 15500, active: 990, debris: 14510 },  // Cosmos-Iridium
+  { year: 2009, total: 15500, active: 990, debris: 14510 },
   { year: 2010, total: 16100, active: 1010,debris: 15090 },
   { year: 2012, total: 17000, active: 1060,debris: 15940 },
   { year: 2014, total: 17700, active: 1170,debris: 16530 },
   { year: 2016, total: 18400, active: 1400,debris: 17000 },
   { year: 2018, total: 20000, active: 2000,debris: 18000 },
-  { year: 2019, total: 21000, active: 2500,debris: 18500 },  // India ASAT
+  { year: 2019, total: 21000, active: 2500,debris: 18500 },
   { year: 2020, total: 23000, active: 3400,debris: 19600 },
-  { year: 2021, total: 27000, active: 5200,debris: 21800 },  // Russia ASAT
+  { year: 2021, total: 27000, active: 5200,debris: 21800 },
   { year: 2022, total: 29000, active: 6100,debris: 22900 },
   { year: 2023, total: 31500, active: 7800,debris: 23700 },
   { year: 2024, total: 34000, active: 9200,debris: 24800 },

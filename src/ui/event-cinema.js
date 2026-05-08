@@ -1,22 +1,5 @@
 
-/**
- * Event Cinema v2 — non-intrusive bottom-left toast that appears on GOTO.
- * Shows event context, geographic region, and animation status.
- * Does NOT dim the scene — the 3D view stays fully visible.
- *
- * Usage:
- *   import { showEventCinema } from './event-cinema.js';
- *   showEventCinema(ev, {
- *     onReady:    ({ lat, lon, altKm }) => { ... fly camera ... },
- *     onComplete: ()                   => { simTime = ms; },
- *   });
- */
 
-// ── Per-event geographic + display data ──────────────────────────────────────
-// lat/lon: approximate center of the event (for camera orientation)
-// altKm:   orbital altitude where the event occurred
-// region:  human-readable location string
-// anim:    whether the 3D scene can show something meaningful at this moment
 const EVENT_META = {
   sputnik:         { lat:  51.6, lon:  63.3, altKm:  584, region: 'Kazakhstan · 584 km LEO',         anim: 'active' },
   sputnik2:        { lat:  51.6, lon:  63.3, altKm: 1660, region: 'Kazakhstan · 1,660 km LEO',       anim: 'active' },
@@ -44,14 +27,12 @@ const EVENT_META = {
   borisov:         { lat:   0.0, lon:   0.0, altKm:    0, region: 'Interstellar — Perseus direction',anim: 'none'   },
 };
 
-// ── Animation status descriptions ─────────────────────────────────────────────
 const ANIM_STATUS = {
   active:  'Satellites visible in 3D at this altitude',
   density: 'Open Density Map to see orbital shell concentration',
   none:    'Historical event — no live simulation available',
 };
 
-// ── Category colors ───────────────────────────────────────────────────────────
 const CAT_COLOR = {
   launch:       'var(--blue)',
   debris:       'var(--red)',
@@ -67,7 +48,6 @@ const CAT_LABEL = {
   milestone:    'MILESTONE',
 };
 
-// ── CSS ───────────────────────────────────────────────────────────────────────
 const CSS = `
 #event-cinema {
   position: fixed;
@@ -186,7 +166,6 @@ const CSS = `
 .ec-info-value.ec-anim-hint  { color: var(--amber); }
 `;
 
-// ── State ─────────────────────────────────────────────────────────────────────
 let _overlay     = null;
 let _cssInjected = false;
 let _timerId     = null;
@@ -234,15 +213,6 @@ function _getOrCreate() {
   return _overlay;
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
-
-/**
- * Show the event toast.
- * @param {object} ev   - History event (id, title, date, category)
- * @param {object} opts
- * @param {function} opts.onReady    - Called with { lat, lon, altKm } immediately
- * @param {function} opts.onComplete - Called after 7s or on skip
- */
 export function showEventCinema(ev, { onReady, onComplete } = {}) {
   _injectCSS();
   const overlay = _getOrCreate();
@@ -256,10 +226,8 @@ export function showEventCinema(ev, { onReady, onComplete } = {}) {
   const animText = ANIM_STATUS[animType] ?? ANIM_STATUS.none;
   const animCls  = animType === 'active' ? 'ec-anim-ok' : animType === 'density' ? 'ec-anim-hint' : 'ec-anim-none';
 
-  // Apply color to card
   overlay.querySelector('.ec-card').style.setProperty('--ec-col', color);
 
-  // Fill content
   const badge = overlay.querySelector('#ec-badge');
   badge.textContent   = badgeLbl;
   badge.style.color   = color;
@@ -272,19 +240,15 @@ export function showEventCinema(ev, { onReady, onComplete } = {}) {
   animEl.textContent = animText;
   animEl.className   = `ec-info-value ${animCls}`;
 
-  // Notify caller → camera fly + optional satellite selection
   onReady?.({ lat: meta.lat, lon: meta.lon, altKm: meta.altKm, anim: animType });
 
-  // Show
   overlay.classList.add('ec-visible');
 
-  // ESC key
   function onKeyDown(e) {
     if (e.key === 'Escape') { document.removeEventListener('keydown', onKeyDown); finish(); }
   }
   document.addEventListener('keydown', onKeyDown);
 
-  // Skip button
   overlay.querySelector('#ec-skip').addEventListener('click', finish, { once: true });
 
   function finish() {
@@ -303,7 +267,6 @@ function _cancelRunning() {
   _timerId = null;
 }
 
-/** Imperatively hide (e.g. if user navigates elsewhere) */
 export function hideEventCinema() {
   _cleanup?.();
   _cleanup = null;

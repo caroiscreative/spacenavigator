@@ -2,8 +2,8 @@
 import * as THREE from 'three/webgpu';
 
 export const EARTH_RADIUS_KM    = 6371.0;
-export const SCENE_KM_PER_UNIT  = 500.0;       // 1 scene unit = 500 km at LEO scale
-export const EARTH_RADIUS_UNITS = EARTH_RADIUS_KM / SCENE_KM_PER_UNIT; // 12.742
+export const SCENE_KM_PER_UNIT  = 500.0;
+export const EARTH_RADIUS_UNITS = EARTH_RADIUS_KM / SCENE_KM_PER_UNIT;
 
 export const EARTH_ROTATION_RATE_RAD_S = (2 * Math.PI) / 86164.1;
 
@@ -21,9 +21,9 @@ export function geodeticToScene(latDeg, lonDeg, altKm = 0) {
   const r   = kmToUnits(EARTH_RADIUS_KM + altKm);
 
   return new THREE.Vector3(
-     r * Math.cos(lat) * Math.sin(lon),  // X: east
-     r * Math.sin(lat),                  // Y: north pole
-    -r * Math.cos(lat) * Math.cos(lon),  // Z: towards prime meridian (negated for right-hand)
+     r * Math.cos(lat) * Math.sin(lon),
+     r * Math.sin(lat),
+    -r * Math.cos(lat) * Math.cos(lon),
   );
 }
 

@@ -6,7 +6,7 @@ const SUN_DISTANCE = 650;
 
 const SUN_DIRECTION = new THREE.Vector3(0.75, 0.0, 0.64).normalize();
 
-export const SUN_VISUAL_RADIUS = 6;   // scene units (~3,000 km visual scale)
+export const SUN_VISUAL_RADIUS = 6;
 const SUN_RADIUS = SUN_VISUAL_RADIUS;
 
 const DEG = Math.PI / 180;
@@ -20,14 +20,14 @@ const SUN_HALO_BASE_OPAC = 1.0;
 export const SUN_SCENE_DIRECTION = new THREE.Vector3(0.75, 0.0, 0.64).normalize();
 export const SUN_SCENE_DISTANCE  = SUN_DISTANCE;
 
-export const SUN_REAL_RADIUS = Math.round(696340 / 500);   // 1393 scene units
+export const SUN_REAL_RADIUS = Math.round(696340 / 500);
 
 const SUN_TEXTURE_PATH = '/textures/planets/2k_sun.jpg';
 
 const SDO_DIRECT  = 'https://sdo.gsfc.nasa.gov/assets/img/latest/latest_256_0171.jpg';
 const SDO_URL_171 = '/sdo/assets/img/latest/latest_256_0171.jpg';
 
-const SDO_REFRESH_MS = 10 * 60 * 1000; // 10 minutes
+const SDO_REFRESH_MS = 10 * 60 * 1000;
 
 export async function createSun(scene) {
   const loader = new THREE.TextureLoader();
@@ -45,7 +45,7 @@ export async function createSun(scene) {
   sun.position.copy(sunPos);
   sun.name       = 'sun';
   sun.frustumCulled = false;
-  sun.userData.isSun = true;   // flag for click detection
+  sun.userData.isSun = true;
   scene.add(sun);
 
   let sdoTex = null;
@@ -65,7 +65,7 @@ export async function createSun(scene) {
     const prev = sdoTex;
     sdoTex = tex;
     sunMat.map = tex;
-    sunMat.color.set(0xFFCC88);  // warm tint for EUV gold corona
+    sunMat.color.set(0xFFCC88);
     sunMat.needsUpdate = true;
     prev?.dispose();
   });
@@ -76,7 +76,7 @@ export async function createSun(scene) {
 
   const sunHalo = createSunHaloSprite(scene);
 
-  const sunLight = new THREE.DirectionalLight(0xFFF8E7, 2.2);  // warm white, increased intensity
+  const sunLight = new THREE.DirectionalLight(0xFFF8E7, 2.2);
   sunLight.position.copy(sunPos);
   sunLight.target.position.set(0, 0, 0);
   scene.add(sunLight);
@@ -219,13 +219,13 @@ function createSunHaloTexture() {
   const ctx  = canvas.getContext('2d');
 
   const grad = ctx.createRadialGradient(half, half, 0, half, half, half);
-  grad.addColorStop(0.00, 'rgba(255,255,230,1.00)');  // white-hot core
-  grad.addColorStop(0.10, 'rgba(255,240,160,0.95)');  // warm white
-  grad.addColorStop(0.25, 'rgba(255,200, 80,0.75)');  // gold
-  grad.addColorStop(0.45, 'rgba(255,140, 30,0.45)');  // orange
-  grad.addColorStop(0.65, 'rgba(220, 80, 10,0.18)');  // deep orange
-  grad.addColorStop(0.82, 'rgba(160, 40,  5,0.05)');  // red rim
-  grad.addColorStop(1.00, 'rgba(  0,  0,  0,0.00)');  // transparent edge
+  grad.addColorStop(0.00, 'rgba(255,255,230,1.00)');
+  grad.addColorStop(0.10, 'rgba(255,240,160,0.95)');
+  grad.addColorStop(0.25, 'rgba(255,200, 80,0.75)');
+  grad.addColorStop(0.45, 'rgba(255,140, 30,0.45)');
+  grad.addColorStop(0.65, 'rgba(220, 80, 10,0.18)');
+  grad.addColorStop(0.82, 'rgba(160, 40,  5,0.05)');
+  grad.addColorStop(1.00, 'rgba(  0,  0,  0,0.00)');
 
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, SIZE, SIZE);
@@ -242,12 +242,12 @@ function createSunHaloSprite(scene) {
     transparent: true,
     opacity:     0,
     depthWrite:  false,
-    depthTest:   false,   // always renders — never occluded by geometry
+    depthTest:   false,
   });
   const sprite = new THREE.Sprite(mat);
   sprite.name          = 'sun-halo';
   sprite.frustumCulled = false;
-  sprite.renderOrder   = 2;   // after star field and planets
+  sprite.renderOrder   = 2;
   scene.add(sprite);
   return sprite;
 }
@@ -261,10 +261,10 @@ function createSunGradientTexture() {
   const cx = size / 2, cy = size / 2, r = size / 2;
 
   const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-  grad.addColorStop(0.0,  '#fffde0'); // white-hot core
-  grad.addColorStop(0.35, '#ffcc44'); // gold
-  grad.addColorStop(0.65, '#ff8800'); // orange
-  grad.addColorStop(1.0,  '#cc4400'); // deep red rim
+  grad.addColorStop(0.0,  '#fffde0');
+  grad.addColorStop(0.35, '#ffcc44');
+  grad.addColorStop(0.65, '#ff8800');
+  grad.addColorStop(1.0,  '#cc4400');
 
   ctx.fillStyle = grad;
   ctx.beginPath();

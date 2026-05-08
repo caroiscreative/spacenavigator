@@ -1,6 +1,6 @@
 
 const COL_ID  =  0;
-const COL_HIP =  1;   // Hipparcos catalog number — used by constellation lines data
+const COL_HIP =  1;
 const COL_MAG = 13;
 const COL_CI  = 16;
 const COL_X   = 17;
@@ -29,11 +29,11 @@ export async function loadHYG(url = '/data/hyg_v38.csv') {
 
 function parseCSV(text) {
   const lines    = text.split('\n');
-  const maxStars = lines.length - 1; // line 0 is the header
+  const maxStars = lines.length - 1;
 
   const positions = new Float32Array(maxStars * 3);
   const colors    = new Float32Array(maxStars * 3);
-  const sizes     = new Float32Array(maxStars);     // reserved for future sizeNode use
+  const sizes     = new Float32Array(maxStars);
 
   const hipMap = new Map();
 
@@ -58,9 +58,9 @@ function parseCSV(text) {
     if (!isFinite(mag)) continue;
 
     const len = Math.sqrt(hx * hx + hy * hy + hz * hz);
-    const nx  =  (hx / len) * SKY_RADIUS;  // threeX =  hygX
-    const ny  =  (hz / len) * SKY_RADIUS;  // threeY =  hygZ  (NCP → +Y up)
-    const nz  = -(hy / len) * SKY_RADIUS;  // threeZ = −hygY
+    const nx  =  (hx / len) * SKY_RADIUS;
+    const ny  =  (hz / len) * SKY_RADIUS;
+    const nz  = -(hy / len) * SKY_RADIUS;
 
     positions[idx * 3]     = nx;
     positions[idx * 3 + 1] = ny;
@@ -98,21 +98,21 @@ function bvToRgb(bv) {
 
   if (t < 0.3) {
     const f = (t + 0.4) / 0.7;
-    r = 0.82 + f * 0.08;   // 0.82 → 0.90
+    r = 0.82 + f * 0.08;
     b = 1.00;
   } else if (t < 0.8) {
     const f = (t - 0.3) / 0.5;
-    r = 0.90 + f * 0.10;   // 0.90 → 1.00
-    b = 1.00 - f * 0.15;   // 1.00 → 0.85
+    r = 0.90 + f * 0.10;
+    b = 1.00 - f * 0.15;
   } else {
     const f = Math.min(1.0, (t - 0.8) / 1.2);
     r = 1.00;
-    b = 0.85 - f * 0.05;   // 0.85 → 0.80
+    b = 0.85 - f * 0.05;
   }
 
   r = Math.min(1.0, Math.max(0.8, r));
   b = Math.min(1.0, Math.max(0.8, b));
-  const g = Math.min(r, b);   // Craig Taylor: G = min(R, B)
+  const g = Math.min(r, b);
 
   return { r, g, b };
 }

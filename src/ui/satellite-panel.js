@@ -158,15 +158,15 @@ export function createSatellitePanel(getTLECatalog = () => []) {
   }
 
   const SAT_IMAGES = {
-    25544: {  // ISS — photo from STS-134 fly-around, May 2011
+    25544: {
       url:    'https://images-assets.nasa.gov/image/iss027e036027/iss027e036027~small.jpg',
       credit: 'NASA',
     },
-    20580: {  // Hubble Space Telescope — SM4 servicing mission photo, 2009
+    20580: {
       url:    'https://images-assets.nasa.gov/image/sts125-s-1/sts125-s-1~small.jpg',
       credit: 'NASA',
     },
-    43205: {  // Tiangong Space Station — Shenzhou-14 rendezvous photo, 2022
+    43205: {
       url:    'https://images-assets.nasa.gov/image/tiangong-space-station/tiangong-space-station~small.jpg',
       credit: 'CNSA',
     },

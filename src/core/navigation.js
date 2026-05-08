@@ -6,7 +6,7 @@ import { EARTH_RADIUS_UNITS } from '../utils/coordinates.js';
 const SKY_RADIUS   = 9e4;
 const MIN_DISTANCE = EARTH_RADIUS_UNITS * 1.002;
 const MAX_DISTANCE = SKY_RADIUS * 1.05;
-const FLIGHT_MS    = 1800;   // fly-to animation duration
+const FLIGHT_MS    = 1800;
 
 const SOLAR_VIEW_DIR = new THREE.Vector3(0.28, 0.62, 0.73).normalize();
 
@@ -26,14 +26,14 @@ export function createNavigation(camera, controls) {
 
   const elScale  = document.getElementById('stat-scale');
   const elDist   = document.getElementById('stat-dist');
-  const elPreset = document.getElementById('stat-preset'); // preset flash label
+  const elPreset = document.getElementById('stat-preset');
 
-  let animStart    = null;   // performance.now() when animation began
-  let animFromDist = 0;      // starting distance
-  let animToDist   = 0;      // target distance
+  let animStart    = null;
+  let animFromDist = 0;
+  let animToDist   = 0;
   let animating    = false;
-  let animFromDir  = null;   // unit vector — camera direction at animation start
-  let animToDir    = null;   // unit vector — target camera direction (null = keep current)
+  let animFromDir  = null;
+  let animToDir    = null;
 
   let focusMesh    = null;
 
@@ -77,7 +77,7 @@ export function createNavigation(camera, controls) {
   });
 
   function flyTo(dist) {
-    animFromDist = camera.position.length();   // Earth-relative for search
+    animFromDist = camera.position.length();
     animToDist   = dist;
     animStart    = performance.now();
     animating    = true;
@@ -85,20 +85,14 @@ export function createNavigation(camera, controls) {
 
   function flyToPoint(targetPos, dist) {
     controls.target.set(targetPos.x ?? targetPos[0], targetPos.y ?? targetPos[1], targetPos.z ?? targetPos[2]);
-    animFromDist = camera.position.distanceTo(controls.target);  // distance from NEW target
+    animFromDist = camera.position.distanceTo(controls.target);
     animToDist   = dist;
     animStart    = performance.now();
     animating    = true;
   }
 
-  /**
-   * Rotate the camera to face a given direction while keeping Earth (origin)
-   * as the orbit center. Safe for geographic orientation — never moves target.
-   * @param {THREE.Vector3} dir  - Unit vector pointing toward the desired viewing direction
-   * @param {number}        dist - Distance from Earth center to position camera at
-   */
   function flyToDir(dir, dist) {
-    // Always reset orbit target to Earth's origin so the camera keeps orbiting Earth
+
     controls.target.set(0, 0, 0);
     animFromDist = camera.position.length();
     animToDist   = dist;
@@ -124,7 +118,7 @@ export function createNavigation(camera, controls) {
     if (animating) {
       const elapsed = performance.now() - animStart;
       const t       = Math.min(1.0, elapsed / FLIGHT_MS);
-      const ease    = 1 - Math.pow(1 - t, 3);     // cubic ease-out
+      const ease    = 1 - Math.pow(1 - t, 3);
       const newDist = animFromDist + (animToDist - animFromDist) * ease;
 
       const target = controls.target;

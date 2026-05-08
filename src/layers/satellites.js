@@ -2,13 +2,13 @@
 import * as THREE from 'three/webgpu';
 
 const CATEGORY_COLOR = {
-  station:  [1.000, 1.000, 1.000],   // #FFFFFF white
-  starlink: [0.310, 0.765, 0.969],   // #4FC3F7 sky blue
-  oneweb:   [0.502, 0.796, 0.769],   // #80CBC4 teal
-  debris:   [0.937, 0.329, 0.314],   // #EF5350 red
-  geo:      [0.808, 0.576, 0.847],   // #CE93D8 purple
-  meo:      [0.506, 0.780, 0.518],   // #81C784 green
-  leo:      [0.310, 0.765, 0.969],   // #4FC3F7 sky blue (same as Starlink)
+  station:  [1.000, 1.000, 1.000],
+  starlink: [0.310, 0.765, 0.969],
+  oneweb:   [0.502, 0.796, 0.769],
+  debris:   [0.937, 0.329, 0.314],
+  geo:      [0.808, 0.576, 0.847],
+  meo:      [0.506, 0.780, 0.518],
+  leo:      [0.310, 0.765, 0.969],
 };
 
 const PROPAGATE_INTERVAL_MS = 250;
@@ -45,8 +45,6 @@ export function createSatellites(scene, tles) {
 
   console.log(`[Satellites] ${activeCount} active  |  ${debrisCount} debris`);
 
-  // Parse launch year from TLE COSPAR international designator (line1 chars 9-10).
-  // Format: "57001A" = 1957, "98067A" = 1998, "00001A" = 2000.
   function _parseLaunchYear(line1) {
     const s = (line1 || '').substring(9, 11).trim();
     if (!s || s === '00') return 0;
@@ -63,9 +61,8 @@ export function createSatellites(scene, tles) {
     debrisLaunchYears[di] = _parseLaunchYear(tles[debrisIndices[di]].line1);
   }
 
-  // Position used to park not-yet-launched satellites outside the view frustum.
   const _HIDDEN_X = 9e9;
-  let _historicalYear = null;   // null = no filter
+  let _historicalYear = null;
 
   const GM_KM3 = 3.986004418e5;
   const satAltKm = new Float32Array(count);
@@ -233,7 +230,7 @@ export function createSatellites(scene, tles) {
           activePosArray[ai * 3]     = _HIDDEN_X;
           activePosArray[ai * 3 + 1] = 0;
           activePosArray[ai * 3 + 2] = 0;
-          // Also hide from raycaster / hover lookup
+
           positionArray[gi * 3]     = _HIDDEN_X;
           positionArray[gi * 3 + 1] = 0;
           positionArray[gi * 3 + 2] = 0;
@@ -251,7 +248,7 @@ export function createSatellites(scene, tles) {
           debrisPosArray[di * 3]     = _HIDDEN_X;
           debrisPosArray[di * 3 + 1] = 0;
           debrisPosArray[di * 3 + 2] = 0;
-          // Also hide from raycaster / hover lookup
+
           positionArray[gi * 3]     = _HIDDEN_X;
           positionArray[gi * 3 + 1] = 0;
           positionArray[gi * 3 + 2] = 0;
@@ -285,7 +282,6 @@ export function createSatellites(scene, tles) {
     return tles[i].category === 'debris' ? debrisPts.visible : activePts.visible;
   }
 
-  // Returns true if the satellite at global index i is hidden by historical year filter.
   function _isHistoricallyHidden(i) {
     if (i < 0 || _historicalYear === null) return false;
     const ai = activeSubIndex[i];
@@ -377,7 +373,7 @@ export function createSatellites(scene, tles) {
 
   let _altBands    = [];
   let _launchNorads = null;
-  let _dragRiskMap  = null;   // Map<globalIndex, 'elevated'|'high'|'extreme'> or null
+  let _dragRiskMap  = null;
 
   function setAltitudeBands(bands) {
     _altBands = bands ?? [];
@@ -461,7 +457,7 @@ export function createSatellites(scene, tles) {
         activeColorArray[vi + 1] = Math.min(1, activeBaseColorArray[vi + 1] * 2.2);
         activeColorArray[vi + 2] = Math.min(1, activeBaseColorArray[vi + 2] * 2.2);
       } else {
-        // Zero out color — with additive blending, black pixels are fully invisible
+
         activeColorArray[vi]     = 0;
         activeColorArray[vi + 1] = 0;
         activeColorArray[vi + 2] = 0;
@@ -477,7 +473,7 @@ export function createSatellites(scene, tles) {
         debrisColorArray[vi + 1] = Math.min(1, debrisBaseColorArray[vi + 1] * 2.2);
         debrisColorArray[vi + 2] = Math.min(1, debrisBaseColorArray[vi + 2] * 2.2);
       } else {
-        // Zero out color — with additive blending, black pixels are fully invisible
+
         debrisColorArray[vi]     = 0;
         debrisColorArray[vi + 1] = 0;
         debrisColorArray[vi + 2] = 0;
@@ -486,18 +482,12 @@ export function createSatellites(scene, tles) {
     debrisGeo.attributes.color.needsUpdate = true;
   }
 
-  // RGB triplets for risk levels — matching DRAG_RISK_COLOR in drag-forecast.js
   const RISK_RGB = {
-    elevated: [1.000, 0.792, 0.157],   // #FFCA28 yellow
-    high:     [1.000, 0.427, 0.000],   // #FF6D00 orange
-    extreme:  [1.000, 0.090, 0.267],   // #FF1744 red
+    elevated: [1.000, 0.792, 0.157],
+    high:     [1.000, 0.427, 0.000],
+    extreme:  [1.000, 0.090, 0.267],
   };
 
-  /**
-   * Apply drag-risk coloring overlay.
-   * At-risk satellites are colored by risk level; all others retain their base color.
-   * @param {Map<number,string>} riskMap  globalIndex → risk level
-   */
   function setDragRisk(riskMap) {
     _dragRiskMap = riskMap;
     _rebuildDragRisk();

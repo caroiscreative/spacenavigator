@@ -1,16 +1,5 @@
 
-/**
- * Sun Health Panel — tabbed panel for The Sun.
- *
- * Tab 1 – INFO:  static physical facts (existing content)
- * Tab 2 – HEALTH: live solar weather data from spaceWeather
- *
- * Callbacks:
- *   onViewRealSize()  — called when user clicks "VIEW REAL SIZE"
- *   onOpenWeather()   — called when user clicks "SPACE WEATHER ↗"
- */
 
-// SDO direct image URLs — NASA serves these publicly, no proxy needed for <img> tags
 const SDO_URLS = {
   '304':  'https://sdo.gsfc.nasa.gov/assets/img/latest/latest_1024_0304.jpg',
   '171':  'https://sdo.gsfc.nasa.gov/assets/img/latest/latest_1024_0171.jpg',
@@ -23,14 +12,12 @@ const SDO_LABELS = {
   'hmi': 'HMI — Magnetic Field',
 };
 
-// Sun–Earth distance in km
 const AU_KM = 149_597_870;
 
 export function createSunHealthPanel({ spaceWeather, onViewRealSize, onOpenWeather }) {
   const panel     = document.getElementById('sun-panel');
   if (!panel) return { show: () => {}, hide: () => {}, toggle: () => false, isVisible: () => false };
 
-  // ── DOM refs ────────────────────────────────────────────────────────
   const tabInfo      = panel.querySelector('.sun-tab[data-tab="info"]');
   const tabHealth    = panel.querySelector('.sun-tab[data-tab="health"]');
   const bodyInfo     = panel.querySelector('#sun-body-info');
@@ -53,11 +40,10 @@ export function createSunHealthPanel({ spaceWeather, onViewRealSize, onOpenWeath
   const holoBtn      = panel.querySelector('#sun-holo-btn');
   const wxBtn        = panel.querySelector('#sun-wx-btn');
 
-  let _activeTab = 'health';   // open on health by default
+  let _activeTab = 'health';
   let _sdoKey    = '304';
   let _holoActive = false;
 
-  // ── Tab switching ───────────────────────────────────────────────────
   function setTab(tab) {
     _activeTab = tab;
     tabInfo?.classList.toggle('active', tab === 'info');
@@ -69,7 +55,6 @@ export function createSunHealthPanel({ spaceWeather, onViewRealSize, onOpenWeath
   tabInfo?.addEventListener('click',   () => setTab('info'));
   tabHealth?.addEventListener('click', () => setTab('health'));
 
-  // ── SDO wavelength selector ──────────────────────────────────────────
   function setSdo(key) {
     _sdoKey = key;
     if (sdoImg)    sdoImg.src       = SDO_URLS[key] + '?t=' + Math.floor(Date.now() / 600_000);
@@ -79,10 +64,8 @@ export function createSunHealthPanel({ spaceWeather, onViewRealSize, onOpenWeath
 
   sdoBtns.forEach(b => b.addEventListener('click', () => setSdo(b.dataset.sdo)));
 
-  // ── Close ────────────────────────────────────────────────────────────
   closeBtn?.addEventListener('click', hide);
 
-  // ── VIEW REAL SIZE ───────────────────────────────────────────────────
   if (holoBtn) {
     holoBtn.addEventListener('click', () => {
       _holoActive = !_holoActive;
@@ -92,10 +75,8 @@ export function createSunHealthPanel({ spaceWeather, onViewRealSize, onOpenWeath
     });
   }
 
-  // ── SPACE WEATHER link ───────────────────────────────────────────────
   wxBtn?.addEventListener('click', () => onOpenWeather?.());
 
-  // ── Color helpers ────────────────────────────────────────────────────
   function xrayColor(cls) {
     switch (cls) {
       case 'X': return '#FF1744';
@@ -145,8 +126,6 @@ export function createSunHealthPanel({ spaceWeather, onViewRealSize, onOpenWeath
     return null;
   }
 
-  // ── Travel time estimate ─────────────────────────────────────────────
-  // The solar wind we measure at L1 already arrived — it left the Sun ~(1AU / speed) ago.
   function solarWindTravelLabel(speedKms) {
     if (!speedKms || speedKms <= 0) return null;
     const travelHrs = AU_KM / speedKms / 3600;
@@ -155,9 +134,8 @@ export function createSunHealthPanel({ spaceWeather, onViewRealSize, onOpenWeath
     return `Current particles left the Sun ≈${hoursAgo}h ago · ${Math.round(speedKms)} km/s`;
   }
 
-  // ── Health data render ────────────────────────────────────────────────
   function renderHealth(data) {
-    // X-ray
+
     if (xrayBarEl) {
       xrayBarEl.style.width      = `${xrayBarPct(data.xrayFlux)}%`;
       xrayBarEl.style.background = xrayColor(data.xrayClass);
@@ -168,7 +146,6 @@ export function createSunHealthPanel({ spaceWeather, onViewRealSize, onOpenWeath
       xrayClsEl.style.color = xrayColor(data.xrayClass);
     }
 
-    // Solar wind speed
     if (swSpeedEl) {
       swSpeedEl.textContent = data.solarWindSpeed !== null
         ? `${Math.round(data.solarWindSpeed)} km/s`
@@ -176,7 +153,6 @@ export function createSunHealthPanel({ spaceWeather, onViewRealSize, onOpenWeath
       swSpeedEl.style.color = (data.solarWindSpeed > 500) ? '#FF6D00' : 'var(--text-secondary)';
     }
 
-    // IMF Bz
     if (bzEl) {
       const bz = data.bzNT;
       if (bz !== null) {
@@ -190,7 +166,6 @@ export function createSunHealthPanel({ spaceWeather, onViewRealSize, onOpenWeath
       }
     }
 
-    // Solar Flux Index
     if (sfiEl) {
       const sfi = data.sfi;
       if (sfi !== null) {
@@ -202,7 +177,6 @@ export function createSunHealthPanel({ spaceWeather, onViewRealSize, onOpenWeath
       }
     }
 
-    // Recent flares
     if (flaresEl) {
       const flares = data.recentFlares ?? [];
       if (flares.length === 0) {
@@ -227,7 +201,6 @@ export function createSunHealthPanel({ spaceWeather, onViewRealSize, onOpenWeath
       }
     }
 
-    // Earth impact summary (NOAA R/S/G)
     if (impactsEl) {
       const sc  = data.noaaScales ?? {};
       function scaleChip(badge, level, text) {
@@ -241,7 +214,6 @@ export function createSunHealthPanel({ spaceWeather, onViewRealSize, onOpenWeath
                           + scaleChip('G', sc.G ?? 0, sc.GText ?? '');
     }
 
-    // Solar wind travel time
     if (travelEl) {
       const label = solarWindTravelLabel(data.solarWindSpeed);
       travelEl.textContent = label ?? '';
@@ -249,17 +221,14 @@ export function createSunHealthPanel({ spaceWeather, onViewRealSize, onOpenWeath
     }
   }
 
-  // ── Public: refresh (called on weather update) ───────────────────────
   function refresh(data) {
     renderHealth(data);
   }
 
-  // Hook into live weather updates
   spaceWeather.onUpdate(d => {
     if (isVisible()) renderHealth(d);
   });
 
-  // ── Show / hide ──────────────────────────────────────────────────────
   function show() {
     panel.classList.add('visible');
     setTab(_activeTab);
@@ -269,7 +238,7 @@ export function createSunHealthPanel({ spaceWeather, onViewRealSize, onOpenWeath
 
   function hide() {
     panel.classList.remove('visible');
-    // Reset hologram button state (caller handles actual 3D hologram)
+
     if (_holoActive) {
       _holoActive = false;
       if (holoBtn) {

@@ -113,7 +113,7 @@ export async function createConstellations(scene, hipMap) {
   geo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
 
   const mat = new THREE.LineBasicNodeMaterial({
-    color:       0x4488cc,   // cool blue
+    color:       0x4488cc,
     transparent: true,
     opacity:     0.28,
     depthWrite:  false,
@@ -128,17 +128,17 @@ export async function createConstellations(scene, hipMap) {
 
   function isVisible() { return lines.visible; }
 
-  const HL_MAX_FLOATS = 991 * 2 * 3;   // 991 segs × 2 pts × 3 components
+  const HL_MAX_FLOATS = 991 * 2 * 3;
   const hlBuf  = new Float32Array(HL_MAX_FLOATS);
   const hlAttr = new THREE.BufferAttribute(hlBuf, 3);
   hlAttr.setUsage(THREE.DynamicDrawUsage);
 
   const hlGeo = new THREE.BufferGeometry();
   hlGeo.setAttribute('position', hlAttr);
-  hlGeo.setDrawRange(0, 0);   // draw nothing until a constellation is hovered
+  hlGeo.setDrawRange(0, 0);
 
   const hlMat = new THREE.LineBasicNodeMaterial({
-    color:       0xa8ccee,   // brighter, cooler blue
+    color:       0xa8ccee,
     transparent: true,
     opacity:     0.85,
     depthWrite:  false,
@@ -169,7 +169,7 @@ export async function createConstellations(scene, hipMap) {
 
     hlBuf.set(segs);
     hlAttr.needsUpdate = true;
-    hlGeo.setDrawRange(0, segs.length / 3);   // vertices = floats / 3
+    hlGeo.setDrawRange(0, segs.length / 3);
     hlGeo.computeBoundingSphere();
     hlMesh.visible = true;
   }
@@ -185,13 +185,13 @@ export async function createConstellations(scene, hipMap) {
   }
 
   const _pickRay = new THREE.Raycaster();
-  const _PICK_COS = Math.cos(2 * Math.PI / 180);    // cos(2°) ≈ 0.9994 — 1° wider selection area
+  const _PICK_COS = Math.cos(2 * Math.PI / 180);
 
   function pick(ndcX, ndcY, camera) {
     _pickRay.setFromCamera({ x: ndcX, y: ndcY }, camera);
-    const dir = _pickRay.ray.direction;   // unit vector, world space
+    const dir = _pickRay.ray.direction;
 
-    let bestDot  = _PICK_COS;   // must exceed threshold
+    let bestDot  = _PICK_COS;
     let bestAbbr = null;
 
     for (const [abbr, stars] of constStars) {
@@ -209,7 +209,6 @@ export async function createConstellations(scene, hipMap) {
     return info ? { abbr: bestAbbr, ...info } : null;
   }
 
-  // Build centroid map: abbr → normalized THREE.Vector3 (average of all star directions)
   const centers = new Map();
   for (const [abbr, stars] of constStars) {
     if (!stars.length) continue;
@@ -230,9 +229,9 @@ function parseConstellations(text, hipMap) {
   let   segCount  = 0;
   let   missingHips = 0;
 
-  const seenHips    = new Map();  // abbr → Set<number>
-  const constStars  = new Map();  // abbr → THREE.Vector3[]
-  const constSegBufs = new Map(); // abbr → number[]
+  const seenHips    = new Map();
+  const constStars  = new Map();
+  const constSegBufs = new Map();
 
   for (const rawLine of text.split('\n')) {
     const line = rawLine.trim();

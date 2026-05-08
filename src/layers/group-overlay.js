@@ -26,17 +26,17 @@ export function createGroupOverlay(scene, groupEntries) {
     vertexColors: true,
     blending:     THREE.AdditiveBlending,
     depthWrite:   false,
-    depthTest:    false,   // same fix as trails / heat shells
+    depthTest:    false,
     transparent:  true,
   });
 
   const envelopeGroup     = new THREE.Group();
   envelopeGroup.name      = 'group-envelope';
   envelopeGroup.frustumCulled = false;
-  envelopeGroup.renderOrder   = 999;   // draw after Earth so depthTest:false always wins
+  envelopeGroup.renderOrder   = 999;
   scene.add(envelopeGroup);
 
-  const _proj = new THREE.Vector3();   // reused in updateReticles
+  const _proj = new THREE.Vector3();
 
   const satellites = groupEntries.map(({ tle, idx }) => {
     const satrec    = twoline2satrec(tle.line1, tle.line2);
@@ -84,14 +84,14 @@ export function createGroupOverlay(scene, groupEntries) {
         const result = propagate(satrec, new Date(t));
 
         if (result.position && result.position !== false) {
-          const { x, y, z } = result.position;   // ECI km
+          const { x, y, z } = result.position;
           posArray[i * 3]     =  x / 500;
           posArray[i * 3 + 1] =  z / 500;
           posArray[i * 3 + 2] = -y / 500;
         }
 
         const frac       = i / (NUM_POINTS - 1);
-        const distCentre = Math.abs(frac - 0.5) * 2;          // 0→1 from centre
+        const distCentre = Math.abs(frac - 0.5) * 2;
         const brightness = FLOOR_BRIGHTNESS
                          + (PEAK_BRIGHTNESS - FLOOR_BRIGHTNESS)
                          * Math.pow(1 - distCentre, 2.2);
@@ -135,7 +135,7 @@ export function createGroupOverlay(scene, groupEntries) {
 
       _proj.set(px, py, pz).project(camera);
 
-      if (_proj.z >= 1) {   // behind the camera
+      if (_proj.z >= 1) {
         el.classList.add('hidden');
         continue;
       }

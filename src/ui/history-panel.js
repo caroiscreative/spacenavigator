@@ -250,7 +250,6 @@ function drawChart(canvas, cursorMs, state) {
   function xOf(year)  { return pad.l + ((year - minYear) / (maxYear - minYear)) * cw; }
   function yOf(count) { return pad.t + ch - (count / maxTotal) * ch; }
 
-  // Debris fill
   ctx.beginPath();
   data.forEach((d, i) => {
     const x = xOf(d.year), y = yOf(d.debris);
@@ -265,7 +264,6 @@ function drawChart(canvas, cursorMs, state) {
   ctx.fillStyle = debrisGrad;
   ctx.fill();
 
-  // Total fill
   ctx.beginPath();
   data.forEach((d, i) => {
     const x = xOf(d.year), y = yOf(d.total);
@@ -280,7 +278,6 @@ function drawChart(canvas, cursorMs, state) {
   ctx.fillStyle = totalGrad;
   ctx.fill();
 
-  // Total line
   ctx.beginPath();
   data.forEach((d, i) => {
     const x = xOf(d.year), y = yOf(d.total);
@@ -290,7 +287,6 @@ function drawChart(canvas, cursorMs, state) {
   ctx.lineWidth   = 1.5 * dpr;
   ctx.stroke();
 
-  // Active line
   ctx.beginPath();
   data.forEach((d, i) => {
     const x = xOf(d.year), y = yOf(d.active);
@@ -300,7 +296,6 @@ function drawChart(canvas, cursorMs, state) {
   ctx.lineWidth   = 1 * dpr;
   ctx.stroke();
 
-  // Spike dots (debris events)
   [2007, 2009, 2021].forEach(yr => {
     const d = data.find(d => d.year === yr);
     if (!d) return;
@@ -311,7 +306,6 @@ function drawChart(canvas, cursorMs, state) {
     ctx.fill();
   });
 
-  // Year gridlines + labels
   ctx.font         = `${8 * dpr}px "Courier New", monospace`;
   ctx.fillStyle    = 'rgba(79,195,247,0.30)';
   ctx.textAlign    = 'center';
@@ -327,7 +321,6 @@ function drawChart(canvas, cursorMs, state) {
     ctx.stroke();
   });
 
-  // Hover crosshair
   if (state.hoveredX !== null) {
     ctx.beginPath();
     ctx.moveTo(state.hoveredX * dpr, pad.t);
@@ -337,7 +330,6 @@ function drawChart(canvas, cursorMs, state) {
     ctx.stroke();
   }
 
-  // SimTime cursor
   if (cursorMs !== null) {
     const curYear = new Date(cursorMs).getFullYear() + new Date(cursorMs).getMonth() / 12;
     const cx = xOf(curYear);

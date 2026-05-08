@@ -3,31 +3,30 @@ import * as THREE    from 'three/webgpu';
 import { getPlanet } from 'ephemeris';
 
 const SUN_DIRECTION = new THREE.Vector3(0.75, 0.0, 0.64).normalize();
-const AU_SCENE      = 650;     // 1 AU in scene units (matches sun.js SUN_DISTANCE)
+const AU_SCENE      = 650;
 const DEG           = Math.PI / 180;
 
-const MOON_ORBIT_SHOW_DIST = 2000;  // scene units (same as planet rings)
-const MOON_ORBIT_FULL_DIST = 12000;  // scene units — fully opaque
+const MOON_ORBIT_SHOW_DIST = 2000;
+const MOON_ORBIT_FULL_DIST = 12000;
 
-const INCL_NEAR_DIST  = 400;    // below: real inclination × 1×
-const INCL_FAR_DIST   = 2800;   // above: full amplification × INCL_MAX_SCALE
-const INCL_MAX_SCALE  = 7;      // ×7 — visible tilt on all planets without looking extreme
+const INCL_NEAR_DIST  = 400;
+const INCL_FAR_DIST   = 2800;
+const INCL_MAX_SCALE  = 7;
 
-const MOON_VISUAL_R = 100;   // fixed display orbit radius in scene units
+const MOON_VISUAL_R = 100;
 
 const _nodeAxis = new THREE.Vector3();
 const _inclQuat = new THREE.Quaternion();
-const _tmpVec   = new THREE.Vector3();   // scratch vector — reused every frame
+const _tmpVec   = new THREE.Vector3();
 
 function getInclinationScale(camDist) {
   const t = Math.max(0, Math.min(1, (camDist - INCL_NEAR_DIST) / (INCL_FAR_DIST - INCL_NEAR_DIST)));
-  const ease = t * t * (3 - 2 * t);   // smoothstep
+  const ease = t * t * (3 - 2 * t);
   return 1 + (INCL_MAX_SCALE - 1) * ease;
 }
 
 function applyOrbitTilt(ring) {
-  // Use real inclination — no amplification. Planets must sit on their orbit rings,
-  // so both the ring tilt and the planet's Y position must use the same angle.
+
   const i     = ring.inclinationDeg * DEG;
   const Omega = ring.ascNodeDeg * DEG;
   _nodeAxis.set(Math.cos(Omega), 0, -Math.sin(Omega));
@@ -35,14 +34,14 @@ function applyOrbitTilt(ring) {
   ring.group.quaternion.copy(_inclQuat);
 }
 
-const HALO_MIN_PX      = 18;   // minimum screen-pixel diameter of planet halo (subtle)
-const HALO_BASE_OPAC   = 0.55; // max opacity when far away (down from 0.72 for subtlety)
+const HALO_MIN_PX      = 18;
+const HALO_BASE_OPAC   = 0.55;
 
-const PLANET_MIN_PX    = 8;    // minimum sphere radius in screen pixels (8px → 16px diameter)
-const PLANET_MAX_SCALE = 20;   // never scale the mesh more than 20× its real size
+const PLANET_MIN_PX    = 8;
+const PLANET_MAX_SCALE = 20;
 
-const HALO_FADE_IN     = 5.0;  // fully transparent inside 5× radius
-const HALO_FADE_OUT    = 20.0; // fully opaque beyond 20× radius
+const HALO_FADE_IN     = 5.0;
+const HALO_FADE_OUT    = 20.0;
 
 const VSOP_NAMES = {
   Mercury: 'mercury',
@@ -54,21 +53,21 @@ const VSOP_NAMES = {
   Neptune: 'neptune',
 };
 
-const EPHEM_SIM_INTERVAL_MS = 2 * 60 * 60 * 1000;   // 2 simulated hours
+const EPHEM_SIM_INTERVAL_MS = 2 * 60 * 60 * 1000;
 
 const EPHEM_REAL_INTERVAL_MS = 500;
 
 function moonGeocentric(simTimeMs) {
-  const JD = simTimeMs / 86400000.0 + 2440587.5;   // Julian Date
-  const T  = (JD - 2451545.0) / 36525.0;           // centuries from J2000.0
+  const JD = simTimeMs / 86400000.0 + 2440587.5;
+  const T  = (JD - 2451545.0) / 36525.0;
 
   const norm = x => ((x % 360) + 360) % 360;
 
-  const L1 = norm(218.3164477 + 481267.88123421 * T);  // Moon mean longitude
-  const D  = norm(297.8501921 + 445267.1114034  * T);  // Mean elongation
-  const M  = norm(357.5291092 + 35999.0502909   * T);  // Sun mean anomaly
-  const M1 = norm(134.9633964 + 477198.8675055  * T);  // Moon mean anomaly
-  const F  = norm( 93.2720950 + 483202.0175233  * T);  // Argument of latitude
+  const L1 = norm(218.3164477 + 481267.88123421 * T);
+  const D  = norm(297.8501921 + 445267.1114034  * T);
+  const M  = norm(357.5291092 + 35999.0502909   * T);
+  const M1 = norm(134.9633964 + 477198.8675055  * T);
+  const F  = norm( 93.2720950 + 483202.0175233  * T);
 
   const r2d = Math.PI / 180;
 
@@ -89,23 +88,23 @@ function moonGeocentric(simTimeMs) {
            -  2956  * Math.cos(2*D        * r2d);
 
   return {
-    lambda: norm(L1 + dL) * r2d,   // geocentric ecliptic longitude (rad)
-    beta:   dB * r2d,               // geocentric ecliptic latitude (rad)
-    r:      385000.56 + dR,         // geocentric distance (km)
+    lambda: norm(L1 + dL) * r2d,
+    beta:   dB * r2d,
+    r:      385000.56 + dR,
   };
 }
 
 const MOON_DEF = {
   name:        'Moon',
   type:        'Natural satellite',
-  radius:      3.47,   // 1737 km / 500
+  radius:      3.47,
   color:       0x9B9B9B,
   emissive:    0x080808,
   texturePath: '/textures/planets/2k_moon.jpg',
   diameterKm:  3474,
   massKg:      7.342e22,
   gravityMs2:  1.62,
-  dayHours:    655.7,   // synchronous rotation ≈ 27.3 days
+  dayHours:    655.7,
   yearDays:    27.32,
   tempKelvin:  250,
   distAU:      0.00257,
@@ -129,7 +128,7 @@ const PLANETS = [
     yearDays:    88.0,
     tempKelvin:  440,
     distAU:      0.387,
-    inclinationDeg: 7.005, ascNodeDeg: 48.331,   // J2000 mean orbital elements
+    inclinationDeg: 7.005, ascNodeDeg: 48.331,
     description: 'Closest planet to the Sun. No atmosphere, extreme temperature swings from −180°C to 430°C. Heavily cratered surface similar to the Moon.',
     imageUrl:    '/textures/planets/2k_mercury.jpg',
     imageCredit: 'NASA / Solar System Scope',
@@ -288,21 +287,20 @@ const PLANETS = [
   },
 ];
 
-const ORBIT_DIM       = 0.50;  // fixed opacity — always visible, no fade
+const ORBIT_DIM       = 0.50;
 const ORBIT_RING_SEGS = 128;
 
-// Line thickness by camera distance (WebGPU supports linewidth natively)
-const RING_LW_MIN  = 0.8;    // thin at close range
-const RING_LW_MAX  = 3.0;    // thick at full solar system scale
-const RING_LW_NEAR = 800;    // scene units where min width applies
-const RING_LW_FAR  = 40000;  // scene units where max width applies
+const RING_LW_MIN  = 0.8;
+const RING_LW_MAX  = 3.0;
+const RING_LW_NEAR = 800;
+const RING_LW_FAR  = 40000;
 const ORBIT_COLORS = Object.fromEntries(
   PLANETS.map(p => [p.name, new THREE.Color(p.color).multiplyScalar(ORBIT_DIM)])
 );
 ORBIT_COLORS['Earth']   = new THREE.Color(0x6ADEF6).multiplyScalar(ORBIT_DIM);
 ORBIT_COLORS['Moon']    = new THREE.Color(0x9B9B9B).multiplyScalar(ORBIT_DIM);
-ORBIT_COLORS['Mars']    = new THREE.Color(0xFF4500).multiplyScalar(0.75);  // bright orange-red
-ORBIT_COLORS['Neptune'] = new THREE.Color(0x6B9FFF).multiplyScalar(0.80);  // bright blue
+ORBIT_COLORS['Mars']    = new THREE.Color(0xFF4500).multiplyScalar(0.75);
+ORBIT_COLORS['Neptune'] = new THREE.Color(0x6B9FFF).multiplyScalar(0.80);
 
 export function createSolarSystem(scene, camera) {
   const sunPos  = SUN_DIRECTION.clone().multiplyScalar(AU_SCENE);
@@ -338,13 +336,13 @@ export function createSolarSystem(scene, camera) {
 
   const moonHalo = createHaloSprite(MOON_DEF.color, scene);
 
-  let lastEphemRealTime = -Infinity;   // Date.now() of last ephemeris call
-  let lastEphemSimTime  = -Infinity;   // simTimeMs of last ephemeris call
+  let lastEphemRealTime = -Infinity;
+  let lastEphemSimTime  = -Infinity;
 
   function update(simTimeMs) {
     const now      = Date.now();
     const camDist  = camera.position.length();
-    const inclScale = getInclinationScale(camDist);   // shared by rings + planet Y
+    const inclScale = getInclinationScale(camDist);
 
     const simDelta  = Math.abs(simTimeMs - lastEphemSimTime);
     const realDelta = now - lastEphemRealTime;
@@ -362,13 +360,13 @@ export function createSolarSystem(scene, camera) {
           const result = getPlanet(vsopKey, simDate);
           const raw    = result.observed[vsopKey].raw;
           const polar  = raw.position.polar;
-          const L = polar.longitude;            // heliocentric ecliptic longitude (rad)
-          const B = polar.latitude;             // heliocentric ecliptic latitude  (rad)
+          const L = polar.longitude;
+          const B = polar.latitude;
           const r = polar.distance * AU_SCENE;
           const rCosB = r * Math.cos(B);
 
           planet.eclX =  rCosB * Math.cos(L);
-          planet.eclY =  r * Math.sin(B);          // true out-of-ecliptic component
+          planet.eclY =  r * Math.sin(B);
           planet.eclZ = -rCosB * Math.sin(L);
           planet.mesh.position.set(sunPos.x + planet.eclX, sunPos.y + planet.eclY, sunPos.z + planet.eclZ);
         } catch {
@@ -380,7 +378,6 @@ export function createSolarSystem(scene, camera) {
       }
     }
 
-    // Line width grows with distance — rings always fully visible, no fade
     const lwT      = Math.max(0, Math.min(1, (camDist - RING_LW_NEAR) / (RING_LW_FAR - RING_LW_NEAR)));
     const ringLW   = RING_LW_MIN + (RING_LW_MAX - RING_LW_MIN) * lwT;
 
@@ -389,11 +386,10 @@ export function createSolarSystem(scene, camera) {
         planet.orbitRing.line.visible    = true;
         planet.orbitRing.mat.opacity     = ORBIT_DIM;
         planet.orbitRing.mat.linewidth   = ringLW;
-        applyOrbitTilt(planet.orbitRing);   // uses real inclination — matches planet Y
+        applyOrbitTilt(planet.orbitRing);
       }
       if (planet.eclX !== undefined) {
-        // Use the real heliocentric ecliptic position — eclY comes from latitude B.
-        // The ring uses the same real inclination, so the planet sits on its ring.
+
         planet.mesh.position.set(sunPos.x + planet.eclX, sunPos.y + (planet.eclY ?? 0), sunPos.z + planet.eclZ);
         if (planet.ringMesh) {
           planet.ringMesh.position.copy(planet.mesh.position);
@@ -408,7 +404,7 @@ export function createSolarSystem(scene, camera) {
     moonOrbitRing.line.visible    = true;
     moonOrbitRing.mat.opacity     = ORBIT_DIM;
     moonOrbitRing.mat.linewidth   = Math.max(RING_LW_MIN, ringLW * 0.7);
-    moonOrbitRing.group.position.set(0, 0, 0);   // Earth always at scene origin
+    moonOrbitRing.group.position.set(0, 0, 0);
     applyOrbitTilt(moonOrbitRing);
 
     const moon = moonGeocentric(simTimeMs);
@@ -464,7 +460,7 @@ export function createSolarSystem(scene, camera) {
 
   function getMeshes() {
     const result = planets.map(p => ({ mesh: p.mesh, def: p.def }));
-    result.push({ mesh: moonMesh, def: MOON_DEF });   // Moon is clickable/flyable
+    result.push({ mesh: moonMesh, def: MOON_DEF });
     return result;
   }
 
@@ -521,7 +517,7 @@ function buildPlanet(def, scene, sunPos, loader) {
     tex.colorSpace    = THREE.SRGBColorSpace;
     tex.anisotropy    = 4;
     mat.map           = tex;
-    mat.color.set(0xffffff);   // neutral once texture is applied
+    mat.color.set(0xffffff);
     mat.emissiveIntensity = 0.05;
     mat.needsUpdate   = true;
   }, undefined, () => {
@@ -546,9 +542,9 @@ function buildPlanet(def, scene, sunPos, loader) {
       const v3  = new THREE.Vector3();
       for (let i = 0; i < pos.count; i++) {
         v3.fromBufferAttribute(pos, i);
-        const r = v3.length();                         // distance from ring centre
-        const u = (r - rInner) / (rOuter - rInner);   // 0 = inner, 1 = outer
-        uv.setXY(i, u, 0.5);                          // V=0.5 — sample middle row
+        const r = v3.length();
+        const u = (r - rInner) / (rOuter - rInner);
+        uv.setXY(i, u, 0.5);
       }
       uv.needsUpdate = true;
     }
@@ -557,8 +553,8 @@ function buildPlanet(def, scene, sunPos, loader) {
       color:       0xffffff,
       side:        THREE.DoubleSide,
       transparent: true,
-      alphaTest:   0.02,    // discard fully-transparent gaps between ring bands
-      depthWrite:  false,   // don't clip the planet sphere behind the ring
+      alphaTest:   0.02,
+      depthWrite:  false,
       depthTest:   true,
     });
 
@@ -608,10 +604,10 @@ function createHaloTexture(hexColor) {
   const c    = (a) => `rgba(${r},${g},${b},${a})`;
 
   const grad = ctx.createRadialGradient(half, half, 0, half, half, half);
-  grad.addColorStop(0.00, c(0.80));   // bright centre
+  grad.addColorStop(0.00, c(0.80));
   grad.addColorStop(0.28, c(0.55));
   grad.addColorStop(0.52, c(0.38));
-  grad.addColorStop(0.72, c(0.52));   // limb ring — subtle atmospheric emphasis
+  grad.addColorStop(0.72, c(0.52));
   grad.addColorStop(0.83, c(0.22));
   grad.addColorStop(0.95, c(0.04));
   grad.addColorStop(1.00, c(0.00));
@@ -631,11 +627,11 @@ function createHaloSprite(hexColor, scene) {
     transparent: true,
     opacity:     0,
     depthWrite:  false,
-    depthTest:   false,   // always renders — never hidden behind geometry
+    depthTest:   false,
   });
   const sprite = new THREE.Sprite(mat);
   sprite.frustumCulled = false;
-  sprite.renderOrder   = 1;   // after star field
+  sprite.renderOrder   = 1;
   scene.add(sprite);
   return sprite;
 }

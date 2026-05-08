@@ -1,7 +1,7 @@
 
-const HALF_WINDOW_MS  = 7 * 24 * 3600 * 1000;   // 7 days each side
-const SLIDER_STEPS    = 100_000;                  // range input resolution
-const UPDATE_INTERVAL = 80;                        // ms between display refreshes
+const HALF_WINDOW_MS  = 7 * 24 * 3600 * 1000;
+const SLIDER_STEPS    = 100_000;
+const UPDATE_INTERVAL = 80;
 
 function fmtUTC(ms) {
   return new Date(ms).toISOString()
@@ -32,7 +32,7 @@ export function createTimeControls({ getTime, setTime }) {
 
   let visible    = false;
   let dragging   = false;
-  let anchor     = Date.now();           // centre of the scrubber window
+  let anchor     = Date.now();
   let lastUpdate = 0;
 
   function windowMin() { return anchor - HALF_WINDOW_MS; }
@@ -75,10 +75,10 @@ export function createTimeControls({ getTime, setTime }) {
   });
 
   function jumpTo(epochMs) {
-    anchor = epochMs;                   // re-centre window on target
+    anchor = epochMs;
     setTime(epochMs);
     updateRangeLabels();
-    slider.value = SLIDER_STEPS / 2;   // thumb to centre
+    slider.value = SLIDER_STEPS / 2;
     if (dateEl) dateEl.textContent = fmtUTC(epochMs);
   }
 
@@ -102,7 +102,7 @@ export function createTimeControls({ getTime, setTime }) {
   }
 
   function show() {
-    anchor = getTime();   // centre on current simTime when opening
+    anchor = getTime();
     updateRangeLabels();
     slider.value = SLIDER_STEPS / 2;
     if (dateEl) dateEl.textContent = fmtUTC(getTime());

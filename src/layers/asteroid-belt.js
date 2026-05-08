@@ -7,10 +7,10 @@ const AU_SCENE      = 650;
 const J2000_MS      = 946728000000;
 const DEG           = Math.PI / 180;
 
-const REFRESH_SIM_MS  = 24 * 60 * 60 * 1000;   // 1 simulated day
-const REFRESH_REAL_MS = 2000;                    // hard cap in real time
+const REFRESH_SIM_MS  = 24 * 60 * 60 * 1000;
+const REFRESH_REAL_MS = 2000;
 
-const MIN_SHOW_DIST = 800;   // scene units
+const MIN_SHOW_DIST = 800;
 
 export function createAsteroidBelt(scene, camera) {
   const sunPos = SUN_DIRECTION.clone().multiplyScalar(AU_SCENE);
@@ -27,7 +27,7 @@ export function createAsteroidBelt(scene, camera) {
 
   const mat = new THREE.PointsNodeMaterial({
     size:         1.8,
-    sizeAttenuation: false,   // fixed pixel size, no perspective scaling
+    sizeAttenuation: false,
     vertexColors: true,
     transparent:  true,
     opacity:      0.55,
@@ -43,7 +43,7 @@ export function createAsteroidBelt(scene, camera) {
 
   let lastRefreshReal = -Infinity;
   let lastRefreshSim  = -Infinity;
-  let visible      = false;   // off by default — matches hudAstActive = false in main.js
+  let visible      = false;
 
   propagate(J2000_MS, positions, sunPos);
   posAttr.needsUpdate = true;
@@ -87,15 +87,15 @@ function propagate(simTimeMs, out, sunPos) {
 
   for (let idx = 0; idx < ASTEROID_COUNT; idx++) {
     const base = idx * 6;
-    const a    = ASTEROID_ELEMENTS[base + 0];   // AU
+    const a    = ASTEROID_ELEMENTS[base + 0];
     const e    = ASTEROID_ELEMENTS[base + 1];
-    const i    = ASTEROID_ELEMENTS[base + 2] * DEG;   // inclination
-    const om   = ASTEROID_ELEMENTS[base + 3] * DEG;   // longitude of ascending node (Ω)
-    const w    = ASTEROID_ELEMENTS[base + 4] * DEG;   // argument of perihelion (ω)
-    const ma0  = ASTEROID_ELEMENTS[base + 5] * DEG;   // mean anomaly at epoch (J2000)
+    const i    = ASTEROID_ELEMENTS[base + 2] * DEG;
+    const om   = ASTEROID_ELEMENTS[base + 3] * DEG;
+    const w    = ASTEROID_ELEMENTS[base + 4] * DEG;
+    const ma0  = ASTEROID_ELEMENTS[base + 5] * DEG;
 
-    const n  = (2 * Math.PI) / (a ** 1.5 * 365.25);   // rad/day
-    const M  = ma0 + n * daysSinceJ2000;               // current mean anomaly
+    const n  = (2 * Math.PI) / (a ** 1.5 * 365.25);
+    const M  = ma0 + n * daysSinceJ2000;
 
     let E = M;
     E = E - (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
@@ -106,7 +106,7 @@ function propagate(simTimeMs, out, sunPos) {
     const sinE = Math.sin(E);
     const nu   = Math.atan2(Math.sqrt(1 - e * e) * sinE, cosE - e);
 
-    const r = a * (1 - e * cosE);                 // AU
+    const r = a * (1 - e * cosE);
 
     const rP = r * Math.cos(nu);
     const rQ = r * Math.sin(nu);
@@ -131,7 +131,7 @@ function propagate(simTimeMs, out, sunPos) {
 
 function buildColors(colors) {
   for (let idx = 0; idx < ASTEROID_COUNT; idx++) {
-    const a = ASTEROID_ELEMENTS[idx * 6];    // semi-major axis AU
+    const a = ASTEROID_ELEMENTS[idx * 6];
 
     let r, g, b;
     if (a < 2.5) {

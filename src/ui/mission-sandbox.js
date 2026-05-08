@@ -1,14 +1,12 @@
 
 import * as THREE from 'three/webgpu';
 
-const MU_KM3  = 3.986004418e5;  // km³/s²
-const RE_KM   = 6371;           // Earth radius km
-const KM_PER_UNIT = 500;        // scene units → km
+const MU_KM3  = 3.986004418e5;
+const RE_KM   = 6371;
+const KM_PER_UNIT = 500;
 
-// Atmospheric lifetime rough estimates (years) indexed roughly by altitude
 function lifetimeYears(altKm, Bc = 0.01) {
-  // Very rough model: τ ≈ (H / B_c) * exp((alt - alt_ref) / H)
-  // H = scale height (~7 km at 400 km, ~60 km at 800 km)
+
   if (altKm > 2000) return Infinity;
   if (altKm > 1500) return 500;
   if (altKm > 1200) return 200;
@@ -41,8 +39,6 @@ function orbitalVelocityKms(altKm) {
   return Math.sqrt(MU_KM3 / (RE_KM + altKm));
 }
 
-// Δv Hohmann transfer: from reference ISS orbit (408 km, i=51.6°) to target alt
-// Only altitude change — plane change not included (adds complexity)
 function dvHohmann(altKm) {
   const r1 = RE_KM + 408;
   const r2 = RE_KM + altKm;
@@ -52,10 +48,9 @@ function dvHohmann(altKm) {
   const vt2 = Math.sqrt(MU_KM3 * (2 / r2 - 2 / (r1 + r2)));
   const dv1 = Math.abs(vt1 - v1);
   const dv2 = Math.abs(v2 - vt2);
-  return dv1 + dv2; // km/s
+  return dv1 + dv2;
 }
 
-// Ground coverage half-angle (deg) — minimum elevation 5°
 function coverageHalfAngleDeg(altKm, minElev = 5) {
   const rho = RE_KM / (RE_KM + altKm);
   const eta = Math.acos(Math.sin(minElev * Math.PI / 180) / rho);
@@ -68,11 +63,10 @@ function coverageAreaKm2(altKm) {
   return 2 * Math.PI * RE_KM * RE_KM * (1 - Math.cos(halfAngle));
 }
 
-// Satellites needed for continuous global coverage (rough estimate)
 function satsForGlobalCoverage(altKm, inclDeg) {
   const halfAngle = coverageHalfAngleDeg(altKm) * Math.PI / 180;
   const coveragePct = (1 - Math.cos(halfAngle));
-  // Rough: 1 / (2 * coveragePct) planes, 2π / halfAngle sats per plane
+
   const planes = Math.ceil(Math.PI / (2 * halfAngle));
   const perPlane = Math.ceil(Math.PI / halfAngle);
   return planes * perPlane;
@@ -92,7 +86,6 @@ export function createMissionSandbox(scene, onClose) {
 
   document.getElementById('ms-close')?.addEventListener('click', () => { hide(); onClose?.(); });
 
-  // ── 3D preview orbit ──────────────────────────────────────────
   const orbitGeo = new THREE.BufferGeometry();
   const SEGMENTS = 128;
   const orbitPositions = new Float32Array((SEGMENTS + 1) * 3);
@@ -103,14 +96,13 @@ export function createMissionSandbox(scene, onClose) {
     opacity: 0.7,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
-    depthTest:  false,   // always render over Earth
+    depthTest:  false,
   });
   const orbitLine = new THREE.Line(orbitGeo, orbitMat);
   orbitLine.visible     = false;
-  orbitLine.renderOrder = 999;   // draw after Earth in render pipeline
+  orbitLine.renderOrder = 999;
   scene.add(orbitLine);
 
-  // Dashed equator reference ring
   const eqGeo = new THREE.BufferGeometry();
   const eqPos = new Float32Array((SEGMENTS + 1) * 3);
   for (let i = 0; i <= SEGMENTS; i++) {
@@ -127,7 +119,7 @@ export function createMissionSandbox(scene, onClose) {
     opacity: 0.25,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
-    depthTest:  false,   // always render over Earth
+    depthTest:  false,
   });
   const eqLine = new THREE.Line(eqGeo, eqMat);
   eqLine.visible     = false;
@@ -143,7 +135,7 @@ export function createMissionSandbox(scene, onClose) {
 
     for (let i = 0; i <= SEGMENTS; i++) {
       const theta = (i / SEGMENTS) * 2 * Math.PI;
-      // Orbit in its plane, then rotate by inclination
+
       const x = r * Math.cos(theta);
       const y = r * Math.sin(theta) * Math.sin(inclRad);
       const z = r * Math.sin(theta) * Math.cos(inclRad);
@@ -166,7 +158,6 @@ export function createMissionSandbox(scene, onClose) {
     const periodHours = period >= 60 ? `${(period / 60).toFixed(2)} h` : `${period.toFixed(1)} min`;
     const coveragePct = Math.min(100, (coverage / (4 * Math.PI * RE_KM * RE_KM) * 100)).toFixed(1);
 
-    // Orbit type label
     let orbitType = 'LEO';
     if (altKm > 35000 && altKm < 36500) orbitType = 'GEO';
     else if (altKm >= 2000) orbitType = 'MEO';
@@ -174,7 +165,6 @@ export function createMissionSandbox(scene, onClose) {
     else if (inclDeg >= 85) orbitType = 'Polar';
     else if (inclDeg <= 5) orbitType = 'Equatorial';
 
-    // Radiation environment
     let radEnv = 'Low';
     if (altKm > 1500 && altKm < 5000) radEnv = '⚠ Van Allen Inner Belt';
     else if (altKm >= 5000 && altKm < 15000) radEnv = '⚠⚠ Intense Radiation';
@@ -219,7 +209,6 @@ export function createMissionSandbox(scene, onClose) {
   altSlider?.addEventListener('input', _onAltChange);
   inclSlider?.addEventListener('input', _onInclChange);
 
-  // Preset buttons
   document.querySelectorAll('[data-ms-preset]').forEach(btn => {
     btn.addEventListener('click', () => {
       const alt  = parseInt(btn.dataset.msAlt,  10);

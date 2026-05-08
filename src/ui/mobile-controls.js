@@ -1,7 +1,4 @@
 
-// mobile-controls.js — Phase 2.4
-// EXPL drawer = DSO catalog + Satellites/Debris explorer (with groups + search)
-// Bottom bar  = single LAYERS button → unified panel (BODY · VIEW · DISP · OBJ)
 
 import { GALAXIES, NEBULAE, BLACK_HOLES } from '../data/galaxy-catalog.js';
 
@@ -113,8 +110,6 @@ function formatDist(distance, distUnit) {
 export function isMobile() {
   return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 }
-
-// ─── CSS ──────────────────────────────────────────────────────────────────────
 
 function injectCSS() {
   if (document.getElementById('mob-hud-style')) return;
@@ -576,8 +571,6 @@ function injectCSS() {
   document.head.appendChild(s);
 }
 
-// ─── Factory ──────────────────────────────────────────────────────────────────
-
 export function createMobileControls(camera, orbitControls, canvas, callbacks = {}) {
   if (!isMobile()) return null;
 
@@ -593,7 +586,6 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
     risk: false, weather: false,
   };
 
-  // ── Top bar ──────────────────────────────────────────
   const topBar = document.createElement('div');
   topBar.id = 'mob-top';
   topBar.innerHTML = `
@@ -605,14 +597,12 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
   `;
   document.body.appendChild(topBar);
 
-  // ── EXPL button ──────────────────────────────────────
   const explBtn = document.createElement('button');
   explBtn.id = 'mob-expl-btn';
   explBtn.setAttribute('aria-label', 'Open explorer');
   explBtn.innerHTML = `<span class="expl-icon">⊹</span><span class="expl-label">EXPL</span>`;
   document.body.appendChild(explBtn);
 
-  // ── Explorer drawer ──────────────────────────────────
   const explorer = document.createElement('div');
   explorer.id = 'mob-explorer';
 
@@ -671,12 +661,10 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
   `;
   document.body.appendChild(explorer);
 
-  // ── Backdrop ─────────────────────────────────────────
   const backdrop = document.createElement('div');
   backdrop.id = 'mob-backdrop';
   document.body.appendChild(backdrop);
 
-  // ── Bottom bar ───────────────────────────────────────
   const bottomBar = document.createElement('div');
   bottomBar.id = 'mob-bottom-bar';
   bottomBar.innerHTML = `
@@ -687,7 +675,6 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
   `;
   document.body.appendChild(bottomBar);
 
-  // ── Unified layer panel ──────────────────────────────
   const layerPanel = document.createElement('div');
   layerPanel.id = 'mob-layer-panel';
 
@@ -727,7 +714,6 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
   `;
   document.body.appendChild(layerPanel);
 
-  // ── Info sheet ───────────────────────────────────────
   const infoSheet = document.createElement('div');
   infoSheet.id = 'mob-info-sheet';
   infoSheet.innerHTML = `
@@ -745,7 +731,6 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
   `;
   document.body.appendChild(infoSheet);
 
-  // ── Refs ─────────────────────────────────────────────
   const utcEl       = document.getElementById('mob-utc');
   const satCountEl  = document.getElementById('mob-sat-count');
   const bodyNameEl  = document.getElementById('mob-body-name');
@@ -770,7 +755,6 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
   let satActiveGroup = null;
   let debActiveGroup = null;
 
-  // ── Satellite / Debris rendering ─────────────────────
   function renderSatContent(debrisOnly) {
     const contentEl = debrisOnly ? debrisContent : satsContent;
     contentEl.innerHTML = '';
@@ -854,7 +838,6 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
       ? (DEBRIS_GROUP_META[activeGroup] || { label: activeGroup, color: '#EF5350' })
       : (SAT_CATEGORY_META[activeGroup]  || { label: activeGroup, color: '#4FC3F7' });
 
-    // Back row
     const backRow = document.createElement('div');
     backRow.className = 'mob-back-row';
     backRow.innerHTML = `
@@ -937,14 +920,13 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
     }
   }
 
-  // ── Panel state ───────────────────────────────────────
   function openExplorer() {
     explorerOpen = true;
     explorer.classList.add('open');
     explBtn.classList.add('open');
     backdrop.classList.add('visible');
     if (layerPanelOpen) { layerPanel.classList.remove('open'); layersBtn.classList.remove('open'); layerPanelOpen = false; }
-    // Render SAT/DEBRIS if needed
+
     if (activeTab === 'satellites' || activeTab === 'debris') {
       renderSatContent(activeTab === 'debris');
     }
@@ -965,7 +947,6 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
     }
   }
 
-  // ── EXPL button ───────────────────────────────────────
   explBtn.addEventListener('pointerdown', (e) => {
     e.stopPropagation(); e.preventDefault();
     explorerOpen ? closeExplorer() : openExplorer();
@@ -973,7 +954,6 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
 
   backdrop.addEventListener('pointerdown', () => closeExplorer(), { passive: true });
 
-  // ── Explorer tab switching ────────────────────────────
   explorer.querySelectorAll('.mob-expl-tab').forEach(tab => {
     tab.addEventListener('pointerdown', (e) => {
       e.stopPropagation(); e.preventDefault();
@@ -983,7 +963,6 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
       tab.classList.add('active');
       explorer.querySelector(`.mob-expl-content[data-content="${activeTab}"]`)?.classList.add('active');
 
-      // Show/hide search bar and count
       const isSat = activeTab === 'satellites' || activeTab === 'debris';
       if (!isSat && searchWrap) searchWrap.classList.add('hidden');
       if (countEl) countEl.textContent = '';
@@ -993,7 +972,6 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
     }, { passive: false });
   });
 
-  // ── DSO rows ──────────────────────────────────────────
   explorer.querySelectorAll('.mob-dso-row').forEach(row => {
     row.addEventListener('pointerdown', (e) => {
       e.stopPropagation(); e.preventDefault();
@@ -1004,7 +982,6 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
     }, { passive: false });
   });
 
-  // ── Search input ──────────────────────────────────────
   searchInput?.addEventListener('input', () => {
     if (activeTab === 'satellites') renderSatContent(false);
     if (activeTab === 'debris')     renderSatContent(true);
@@ -1013,13 +990,11 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
     if (e.key === 'Escape') { searchInput.value = ''; renderSatContent(activeTab === 'debris'); }
   });
 
-  // ── LAYERS button ─────────────────────────────────────
   layersBtn.addEventListener('pointerdown', (e) => {
     e.stopPropagation(); e.preventDefault();
     toggleLayerPanel();
   }, { passive: false });
 
-  // ── Planet chips ──────────────────────────────────────
   layerPanel.querySelectorAll('.mob-planet-chip').forEach(chip => {
     chip.addEventListener('pointerdown', (e) => {
       e.stopPropagation(); e.preventDefault();
@@ -1029,7 +1004,6 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
     }, { passive: false });
   });
 
-  // ── View chips ────────────────────────────────────────
   layerPanel.querySelectorAll('.mob-view-chip').forEach(chip => {
     chip.addEventListener('pointerdown', (e) => {
       e.stopPropagation(); e.preventDefault();
@@ -1039,7 +1013,6 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
     }, { passive: false });
   });
 
-  // ── DISP + OBJ chips ──────────────────────────────────
   layerPanel.querySelectorAll('.mob-chip[data-layer]').forEach(chip => {
     chip.addEventListener('pointerdown', (e) => {
       e.stopPropagation(); e.preventDefault();
@@ -1050,7 +1023,6 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
     }, { passive: false });
   });
 
-  // ── Canvas tap-select ─────────────────────────────────
   let ptId = -1, ptX0 = 0, ptY0 = 0, dragged = false;
   canvas.addEventListener('pointerdown', (e) => {
     ptId = e.pointerId; ptX0 = e.clientX; ptY0 = e.clientY; dragged = false;
@@ -1068,7 +1040,6 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
   }, { passive: true });
   canvas.addEventListener('pointercancel', () => { ptId = -1; }, { passive: true });
 
-  // ── Info sheet ────────────────────────────────────────
   infoExpandBtn?.addEventListener('pointerdown', (e) => {
     e.stopPropagation(); e.preventDefault();
     infoExpanded = true;
@@ -1092,7 +1063,6 @@ export function createMobileControls(camera, orbitControls, canvas, callbacks = 
     }));
   }, { passive: false });
 
-  // ── Public API ────────────────────────────────────────
   function showInfo(data) {
     if (infoName)    infoName.textContent = data.name ?? '—';
     if (infoType)    infoType.textContent = data.type ?? '';

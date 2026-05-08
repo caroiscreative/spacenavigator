@@ -40,14 +40,14 @@ export async function createEarth(scene) {
     map:           dayTex,
 
     normalMap:     normalTex,
-    normalScale:   new THREE.Vector2(0.35, 0.35),  // subtle — prevents over-sharpening
+    normalScale:   new THREE.Vector2(0.35, 0.35),
 
     emissiveMap:      nightTex,
-    emissive:         new THREE.Color(0xFFEEAA),   // warm amber city glow
+    emissive:         new THREE.Color(0xFFEEAA),
     emissiveIntensity: 1.0,
 
     metalnessMap:  specularTex,
-    metalness:     0.05,   // mostly non-metallic world
+    metalness:     0.05,
     roughness:     0.85,
 
   });
@@ -61,10 +61,10 @@ export async function createEarth(scene) {
 
   const cloudMat = new THREE.MeshStandardNodeMaterial({
     map:          cloudsTex,
-    alphaMap:     cloudsTex,   // white clouds opaque, black sky transparent
+    alphaMap:     cloudsTex,
     transparent:  true,
     opacity:      0.88,
-    depthWrite:   false,       // prevents sorting artifacts with Earth surface
+    depthWrite:   false,
     roughness:    1.0,
     metalness:    0.0,
   });

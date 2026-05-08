@@ -23,7 +23,6 @@ function catLabel(cat) {
   return m[cat] ?? (cat ? cat.toUpperCase() : 'Unknown');
 }
 
-
 function narrativeRisk(c) {
   const tcaStr  = fmtDuration(c._tcaSec);
   const tcaDist = c._tcaDistKm != null
@@ -55,7 +54,7 @@ export function createConjunctionDetail() {
     return { show: () => {}, hide: () => {}, isVisible: () => false };
   }
 
-  let _onClose = null;   // optional callback when panel is closed
+  let _onClose = null;
 
   function show(c, posA, posB, simTimeMs) {
     if (!c) return;
@@ -127,15 +126,13 @@ export function createConjunctionDetail() {
 
     panel.classList.add('visible');
 
-    // Position detail panel flush to the right of the risk panel.
-    // Must happen AFTER classList.add so offsetWidth is measurable.
     const riskEl = document.getElementById('risk-panel');
     if (riskEl && riskEl.classList.contains('visible')) {
       const rr        = riskEl.getBoundingClientRect();
-      const pw        = panel.offsetWidth || 300;   // fallback to CSS width
+      const pw        = panel.offsetWidth || 300;
       const gap       = 20;
       const idealLeft = rr.right + gap;
-      // If it would spill off-screen, open to the LEFT of the risk panel instead
+
       const fitsRight = idealLeft + pw <= window.innerWidth - gap;
       panel.style.right = 'auto';
       panel.style.left  = fitsRight

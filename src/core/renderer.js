@@ -6,7 +6,7 @@ export async function createRenderer(container) {
   const renderer = new WebGPURenderer({
     antialias:             true,
     logarithmicDepthBuffer: true,
-    preserveDrawingBuffer: true,   // required for canvas.toDataURL() screenshots
+    preserveDrawingBuffer: true,
   });
 
   await renderer.init();

@@ -24,11 +24,11 @@ export function createAtmosphere(scene) {
   const nDotV   = normalWorld.dot(viewDir).clamp(0.0, 1.0);
   const fresnel = nDotV.oneMinus().pow(3.5);
 
-  const innerColor = vec3(0.08, 0.25, 1.00); // deep blue
-  const outerColor = vec3(0.28, 0.58, 1.00); // sky blue
+  const innerColor = vec3(0.08, 0.25, 1.00);
+  const outerColor = vec3(0.28, 0.58, 1.00);
 
   mat.colorNode   = mix(innerColor, outerColor, fresnel);
-  mat.opacityNode = fresnel.mul(0.68); // max ~68% opacity at the limb
+  mat.opacityNode = fresnel.mul(0.68);
 
   const mesh = new THREE.Mesh(geo, mat);
   mesh.name = 'atmosphere';
