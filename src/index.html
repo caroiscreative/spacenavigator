@@ -76,8 +76,25 @@
       padding: 3px 10px;
       gap: 3px;
       min-height: 26px;
-      overflow: visible;
+      overflow-x: auto;
+      overflow-y: visible;
       position: relative;
+      /* hide scrollbar — users drag/scroll naturally */
+      scrollbar-width: none;
+    }
+    .hud-row::-webkit-scrollbar { display: none; }
+
+    /* Section label — tiny dim uppercase, not clickable */
+    .hud-lbl {
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      opacity: 0.5;
+      pointer-events: none;
+      white-space: nowrap;
+      flex-shrink: 0;
+      padding: 0 2px;
     }
 
     /* ── Base HUD button ────────────────────────────────────────── */
@@ -4132,53 +4149,37 @@
     /* ════════════════════════════════════════════════════════════════════════
        COMPACT EMBED MODE  —  body[data-compact]
        Applied when SpaceNavigator is embedded via <iframe ?mode=compact>.
-       HUD is trimmed to Navigate + Scene(sats+debris) + Analysis(risk only).
+       Shows Row 1 (navigate) only; Row 2 (controls) hidden to save space.
        Responsive breakpoints via body[data-compact-size="sm|xs"].
     ════════════════════════════════════════════════════════════════════════ */
 
-    /* ── Elements hidden in ALL compact sizes ──────────────────────────── */
-    body[data-compact] #hud-grp-cmd,        /* Command palette button     */
-    body[data-compact] #hud-grp-tools,      /* Tools group entirely       */
-    body[data-compact] #hud-dots,           /* Active-layer dot row       */
+    /* ── Hide the full controls row — too dense for a small embed ──────── */
+    body[data-compact] #hud-row-ctrl { display: none !important; }
+
+    /* ── Hide misc elements in the nav row ─────────────────────────────── */
+    body[data-compact] #hud-dots,
     body[data-compact] #btn-help,
     body[data-compact] #btn-about,
-    body[data-compact] #phase-hud,
-    body[data-compact] .hud-sep {
-      display: none !important;
-    }
+    body[data-compact] #phase-hud { display: none !important; }
 
-    /* ── Scene group: hide visual toggles, keep only Sats + Debris ─────── */
-    body[data-compact] #btn-starfield,
-    body[data-compact] #btn-orbits,
-    body[data-compact] #btn-constellations,
-    body[data-compact] #btn-asteroids {
-      display: none !important;
-    }
+    /* ── In nav row: hide outer planets + all presets (save width) ──────── */
+    body[data-compact] #btn-preset-leo,
+    body[data-compact] #btn-preset-geo,
+    body[data-compact] #btn-preset-lunar,
+    body[data-compact] #btn-preset-solar,
+    body[data-compact] #btn-preset-stars,
+    body[data-compact] #btn-preset-outer { display: none !important; }
 
-    /* ── Analysis group: keep only Risk, hide the rest ─────────────────── */
-    body[data-compact] #btn-weather,
-    body[data-compact] #btn-heat,
-    body[data-compact] #btn-intl,
-    body[data-compact] #btn-explorer,
-    body[data-compact] #btn-history {
-      display: none !important;
-    }
-
-    /* ── Tighten HUD bar in compact mode ────────────────────────────────── */
+    /* ── Tighten HUD bar ─────────────────────────────────────────────────── */
     body[data-compact] #hud .hud-row {
       padding: 4px 8px;
       gap: 4px;
     }
 
     body[data-compact] .hud-btn {
-      padding: 3px 7px;
+      padding: 2px 6px;
       font-size: 10px;
       letter-spacing: 0.06em;
-    }
-
-    body[data-compact] .hud-group-btn {
-      padding: 3px 8px;
-      font-size: 10px;
     }
 
     body[data-compact] .hud-cmd-btn {
@@ -4186,106 +4187,31 @@
       font-size: 10px;
     }
 
-    /* Tighten flyout sections too */
-    body[data-compact] .hud-flyout-section {
-      font-size: 9px;
-      padding: 4px 8px 2px;
-    }
-
-    body[data-compact] .hud-flyout-row {
-      gap: 4px;
-      padding: 4px 8px;
-    }
-
-    /* Compact time speed bar */
-    body[data-compact] #hud-time-bar {
-      padding: 4px 8px;
-      font-size: 10px;
-    }
-
     body[data-compact] .hud-speed-btn {
-      padding: 3px 7px;
-      font-size: 10px;
-    }
-
-    /* ── sm breakpoint: hide Scene group label, show buttons inline ──────
-       Triggered by JS ResizeObserver at width < 520px                    */
-    body[data-compact][data-compact-size="sm"] #hud-grp-scene .hud-group-btn,
-    body[data-compact][data-compact-size="xs"] #hud-grp-scene .hud-group-btn {
-      display: none !important;
-    }
-
-    body[data-compact][data-compact-size="sm"] #btn-satellites,
-    body[data-compact][data-compact-size="sm"] #btn-debris,
-    body[data-compact][data-compact-size="sm"] #btn-risk,
-    body[data-compact][data-compact-size="xs"] #btn-satellites,
-    body[data-compact][data-compact-size="xs"] #btn-debris,
-    body[data-compact][data-compact-size="xs"] #btn-risk {
-      /* Pull buttons out of flyout at small sizes */
-      display: inline-flex !important;
-    }
-
-    body[data-compact][data-compact-size="sm"] #hud-grp-scene .hud-flyout,
-    body[data-compact][data-compact-size="xs"] #hud-grp-scene .hud-flyout {
-      display: none !important;
-    }
-
-    /* At sm: make Scene group a flat row of inline buttons */
-    body[data-compact][data-compact-size="sm"] #hud-grp-scene,
-    body[data-compact][data-compact-size="xs"] #hud-grp-scene {
-      display: flex;
-      flex-direction: row;
-      gap: 3px;
-      position: static;
-    }
-
-    /* Same treatment for Analysis group risk button */
-    body[data-compact][data-compact-size="sm"] #hud-grp-analysis .hud-group-btn,
-    body[data-compact][data-compact-size="xs"] #hud-grp-analysis .hud-group-btn {
-      display: none !important;
-    }
-
-    body[data-compact][data-compact-size="sm"] #btn-risk,
-    body[data-compact][data-compact-size="xs"] #btn-risk {
-      display: inline-flex !important;
-    }
-
-    body[data-compact][data-compact-size="sm"] #hud-grp-analysis .hud-flyout,
-    body[data-compact][data-compact-size="xs"] #hud-grp-analysis .hud-flyout {
-      display: none !important;
-    }
-
-    body[data-compact][data-compact-size="sm"] #hud-grp-analysis,
-    body[data-compact][data-compact-size="xs"] #hud-grp-analysis {
-      display: flex;
-      flex-direction: row;
-      position: static;
-    }
-
-    /* ── xs breakpoint: hide Navigate flyout label, flatten presets only ─ */
-    body[data-compact][data-compact-size="xs"] .hud-flyout-section { display: none !important; }
-
-    body[data-compact][data-compact-size="xs"] #hud-grp-navigate .hud-group-btn {
-      font-size: 9px;
       padding: 2px 6px;
-    }
-
-    /* ── Branding label in compact bar ───────────────────────────────────── */
-    body[data-compact] #hud-brand {
-      display: flex;
-      align-items: center;
-      gap: 5px;
       font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.10em;
-      color: var(--cyan);
-      opacity: 0.8;
-      white-space: nowrap;
     }
 
+    /* ── sm breakpoint (<520px): also hide Mercury/Venus/Jupiter/Saturn/Uranus/Neptune ─ */
+    body[data-compact][data-compact-size="sm"] [data-key="q"],
+    body[data-compact][data-compact-size="sm"] [data-key="v"],
+    body[data-compact][data-compact-size="sm"] [data-key="j"],
+    body[data-compact][data-compact-size="sm"] [data-key="t"],
+    body[data-compact][data-compact-size="sm"] [data-key="u"],
+    body[data-compact][data-compact-size="sm"] [data-key="n"],
+    body[data-compact][data-compact-size="xs"] [data-key="q"],
+    body[data-compact][data-compact-size="xs"] [data-key="v"],
+    body[data-compact][data-compact-size="xs"] [data-key="j"],
+    body[data-compact][data-compact-size="xs"] [data-key="t"],
+    body[data-compact][data-compact-size="xs"] [data-key="u"],
+    body[data-compact][data-compact-size="xs"] [data-key="n"] { display: none !important; }
+
+    /* ── xs breakpoint (<380px): hide Moon too, hide speed label ─────────── */
+    body[data-compact][data-compact-size="xs"] [data-key="m"] { display: none !important; }
+    body[data-compact][data-compact-size="xs"] #hud-speed-label { display: none !important; }
     body[data-compact][data-compact-size="xs"] #hud-brand { display: none !important; }
 
-    /* ── Info panels in compact mode — same as normal but clamp width ────── */
+    /* ── Info panels in compact mode — clamp width ───────────────────────── */
     body[data-compact] .info-panel,
     body[data-compact] .panel-wrap {
       max-width: min(300px, calc(100vw - 16px));
@@ -4409,21 +4335,62 @@
 
   
   <div id="hud">
-    <div class="hud-row">
+
+    <!-- ── Row 1: Navigate (planets + camera presets + time) ──────── -->
+    <div class="hud-row" id="hud-row-nav">
 
       <!-- Brand -->
-      <div id="hud-brand" style="display:flex;align-items:center;gap:6px;padding:0 4px;opacity:0.65;pointer-events:none;flex-shrink:0;">
-        <svg width="14" height="14" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <div id="hud-brand" style="display:flex;align-items:center;gap:5px;padding:0 4px;opacity:0.65;pointer-events:none;flex-shrink:0;">
+        <svg width="13" height="13" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
           <ellipse cx="24" cy="24" rx="17" ry="9.5" fill="none" stroke="#00D4FF" stroke-width="3" opacity="0.92" transform="rotate(-30, 24, 24)"/>
           <circle cx="24" cy="24" r="4.5" fill="#00D4FF"/>
           <circle cx="31.5" cy="11.5" r="4" fill="#FFD600"/>
         </svg>
-        <span style="font-size:11px;font-weight:500;letter-spacing:0.16em;color:var(--text-primary);text-transform:uppercase;"><span style="color:var(--cyan);">SPACE</span>NAV</span>
+        <span style="font-size:10px;font-weight:500;letter-spacing:0.16em;color:var(--text-primary);text-transform:uppercase;white-space:nowrap;"><span style="color:var(--cyan);">SPACE</span>NAV</span>
       </div>
       <span class="hud-sep">·</span>
 
-      <!-- Command palette -->
-      <div class="hud-group" id="hud-grp-cmd" style="position:relative;">
+      <!-- Planets -->
+      <span class="hud-lbl">Fly to</span>
+      <button class="hud-btn hud-planet-btn" data-key="e">Earth</button>
+      <button class="hud-btn hud-planet-btn" data-key="s">Sun</button>
+      <button class="hud-btn hud-planet-btn" data-key="m">Moon</button>
+      <button class="hud-btn hud-planet-btn" data-key="r">Mars</button>
+      <button class="hud-btn hud-planet-btn" data-key="v">Venus</button>
+      <button class="hud-btn hud-planet-btn" data-key="q">Mercury</button>
+      <button class="hud-btn hud-planet-btn" data-key="j">Jupiter</button>
+      <button class="hud-btn hud-planet-btn" data-key="t">Saturn</button>
+      <button class="hud-btn hud-planet-btn" data-key="u">Uranus</button>
+      <button class="hud-btn hud-planet-btn" data-key="n">Neptune</button>
+      <span class="hud-sep">·</span>
+
+      <!-- Camera presets -->
+      <span class="hud-lbl">View</span>
+      <button class="hud-btn hud-preset-btn" data-key="1" id="btn-preset-leo">LEO</button>
+      <button class="hud-btn hud-preset-btn" data-key="2" id="btn-preset-geo">GEO</button>
+      <button class="hud-btn hud-preset-btn" data-key="3" id="btn-preset-lunar">Lunar</button>
+      <button class="hud-btn hud-preset-btn" data-key="4" id="btn-preset-solar">Solar</button>
+      <button class="hud-btn hud-preset-btn" data-key="5" id="btn-preset-stars">Stars</button>
+      <button class="hud-btn hud-preset-btn" data-key="6" id="btn-preset-outer">Outer</button>
+
+      <!-- Push time controls to the right -->
+      <div style="flex:1;min-width:8px;"></div>
+
+      <!-- Speed controls -->
+      <div class="hud-speed-group">
+        <button class="hud-speed-btn" id="btn-speed-down"><span class="hud-speed-key">[</span> ◄</button>
+        <span id="hud-speed-label">+1×</span>
+        <button class="hud-speed-btn" id="btn-speed-up">► <span class="hud-speed-key">]</span></button>
+      </div>
+      <span class="hud-sep">·</span>
+      <span id="hud-date"></span>
+    </div>
+
+    <!-- ── Row 2: Controls (scene · analysis · tools · help · dots) ── -->
+    <div class="hud-row" id="hud-row-ctrl">
+
+      <!-- Command palette (stays as trigger) -->
+      <div id="hud-grp-cmd" style="position:relative;flex-shrink:0;">
         <button class="hud-cmd-btn" id="btn-command">/ Command</button>
         <div id="cmd-palette" class="hidden">
           <div id="cmd-search-row">
@@ -4436,88 +4403,40 @@
       </div>
       <span class="hud-sep">·</span>
 
-      <!-- Navigate group (planets + presets) -->
-      <div class="hud-group" id="hud-grp-navigate">
-        <button class="hud-group-btn hud-group-btn-amber">Navigate ▲</button>
-        <div class="hud-flyout" style="min-width:260px;">
-          <div class="hud-flyout-section">Planets</div>
-          <div class="hud-flyout-row">
-            <button class="hud-btn hud-planet-btn" data-key="e">E Earth</button>
-            <button class="hud-btn hud-planet-btn" data-key="s">S Sun</button>
-            <button class="hud-btn hud-planet-btn" data-key="q">Q Mercury</button>
-            <button class="hud-btn hud-planet-btn" data-key="v">V Venus</button>
-            <button class="hud-btn hud-planet-btn" data-key="r">R Mars</button>
-            <button class="hud-btn hud-planet-btn" data-key="j">J Jupiter</button>
-            <button class="hud-btn hud-planet-btn" data-key="t">T Saturn</button>
-            <button class="hud-btn hud-planet-btn" data-key="u">U Uranus</button>
-            <button class="hud-btn hud-planet-btn" data-key="n">N Neptune</button>
-            <button class="hud-btn hud-planet-btn" data-key="m">M Moon</button>
-          </div>
-          <div class="hud-flyout-section">Camera presets</div>
-          <div class="hud-flyout-row">
-            <button class="hud-btn hud-preset-btn" data-key="1" id="btn-preset-leo">1 LEO</button>
-            <button class="hud-btn hud-preset-btn" data-key="2" id="btn-preset-geo">2 GEO</button>
-            <button class="hud-btn hud-preset-btn" data-key="3" id="btn-preset-lunar">3 Lunar</button>
-            <button class="hud-btn hud-preset-btn" data-key="4" id="btn-preset-solar">4 Solar</button>
-            <button class="hud-btn hud-preset-btn" data-key="5" id="btn-preset-stars">5 Stars</button>
-            <button class="hud-btn hud-preset-btn" data-key="6" id="btn-preset-outer">6 Outer</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Scene group (visual layers) -->
-      <div class="hud-group" id="hud-grp-scene">
-        <button class="hud-group-btn">Scene ▲</button>
-        <div class="hud-flyout">
-          <div class="hud-flyout-section">Visual layers</div>
-          <div class="hud-flyout-row">
-            <button class="hud-btn hud-toggle-btn active" id="btn-starfield">F Stars</button>
-            <button class="hud-btn hud-toggle-btn" id="btn-orbits">O Rings</button>
-            <button class="hud-btn hud-toggle-btn active" id="btn-constellations">C Lines</button>
-            <button class="hud-btn hud-toggle-btn active" id="btn-satellites">A Sats</button>
-            <button class="hud-btn hud-toggle-btn hud-toggle-red active" id="btn-debris">D Debris</button>
-            <button class="hud-btn hud-toggle-btn hud-toggle-gold" id="btn-asteroids">B Belt</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Analysis group -->
-      <div class="hud-group" id="hud-grp-analysis">
-        <button class="hud-group-btn hud-group-btn-red">Analysis ▲</button>
-        <div class="hud-flyout">
-          <div class="hud-flyout-section">Analysis tools</div>
-          <div class="hud-flyout-row">
-            <button class="hud-btn hud-toggle-btn hud-toggle-green" id="btn-weather">W Weather</button>
-            <button class="hud-btn hud-toggle-btn hud-toggle-red" id="btn-risk">G Risk</button>
-            <button class="hud-btn hud-toggle-btn hud-toggle-red" id="btn-heat">H Density</button>
-            <button class="hud-btn hud-toggle-btn hud-toggle-purple" id="btn-intl">Y Deep</button>
-            <button class="hud-btn hud-toggle-btn hud-toggle-teal" id="btn-explorer">I Explore</button>
-            <button class="hud-btn hud-toggle-btn" id="btn-history">K History</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tools group -->
-      <div class="hud-group" id="hud-grp-tools">
-        <button class="hud-group-btn hud-group-btn-green">Tools ▲</button>
-        <div class="hud-flyout">
-          <div class="hud-flyout-section">Panels</div>
-          <div class="hud-flyout-row">
-            <button class="hud-btn hud-toggle-btn" id="btn-operator">L Fleet</button>
-            <button class="hud-btn hud-toggle-btn hud-toggle-purple" id="btn-mission">Z Mission</button>
-            <button class="hud-btn" id="btn-pot">P Zoom</button>
-          </div>
-          <div class="hud-flyout-section">Utilities</div>
-          <div class="hud-flyout-row">
-            <button class="hud-btn" id="btn-search">/ Search</button>
-            <button class="hud-btn" id="btn-report">Report</button>
-            <button class="hud-btn" id="btn-share">⬡ Share</button>
-          </div>
-        </div>
-      </div>
+      <!-- Scene toggles -->
+      <span class="hud-lbl">Scene</span>
+      <button class="hud-btn hud-toggle-btn active" id="btn-starfield">Stars</button>
+      <button class="hud-btn hud-toggle-btn" id="btn-orbits">Rings</button>
+      <button class="hud-btn hud-toggle-btn active" id="btn-constellations">Lines</button>
+      <button class="hud-btn hud-toggle-btn active" id="btn-satellites">Satellites</button>
+      <button class="hud-btn hud-toggle-btn hud-toggle-red active" id="btn-debris">Debris</button>
+      <button class="hud-btn hud-toggle-btn hud-toggle-gold" id="btn-asteroids">Belt</button>
       <span class="hud-sep">·</span>
-      <button class="hud-btn" id="btn-help">? Help</button>
-      <button class="hud-btn" id="btn-about">About Creator</button>
+
+      <!-- Analysis toggles -->
+      <span class="hud-lbl">Analysis</span>
+      <button class="hud-btn hud-toggle-btn hud-toggle-green" id="btn-weather">Weather</button>
+      <button class="hud-btn hud-toggle-btn hud-toggle-red" id="btn-risk">Risk</button>
+      <button class="hud-btn hud-toggle-btn hud-toggle-red" id="btn-heat">Density</button>
+      <button class="hud-btn hud-toggle-btn hud-toggle-purple" id="btn-intl">Deep Sky</button>
+      <button class="hud-btn hud-toggle-btn hud-toggle-teal" id="btn-explorer">Explore</button>
+      <button class="hud-btn hud-toggle-btn" id="btn-history">History</button>
+      <span class="hud-sep">·</span>
+
+      <!-- Tools -->
+      <span class="hud-lbl">Tools</span>
+      <button class="hud-btn hud-toggle-btn" id="btn-operator">Fleet</button>
+      <button class="hud-btn hud-toggle-btn hud-toggle-purple" id="btn-mission">Mission</button>
+      <button class="hud-btn" id="btn-pot">Zoom</button>
+      <button class="hud-btn" id="btn-search">Search</button>
+      <button class="hud-btn" id="btn-report">Report</button>
+      <button class="hud-btn" id="btn-share">Share</button>
+
+      <!-- Push right -->
+      <div style="flex:1;min-width:8px;"></div>
+
+      <button class="hud-btn" id="btn-help">Help</button>
+      <button class="hud-btn" id="btn-about">About</button>
       <span class="hud-sep">·</span>
 
       <!-- Active layer dots -->
@@ -4532,18 +4451,6 @@
         <span class="hud-dot" id="dot-const"  title="Constellations"></span>
         <span class="hud-dot" id="dot-belt"   title="Asteroids"></span>
       </div>
-      <span class="hud-sep">·</span>
-
-      <!-- Speed controls -->
-      <div class="hud-speed-group">
-        <button class="hud-speed-btn" id="btn-speed-down"><span class="hud-speed-key">[</span> ◄</button>
-        <span id="hud-speed-label">+1×</span>
-        <button class="hud-speed-btn" id="btn-speed-up">► <span class="hud-speed-key">]</span></button>
-      </div>
-      <span class="hud-sep">·</span>
-
-      <!-- Date -->
-      <span id="hud-date"></span>
 
     </div>
   </div>

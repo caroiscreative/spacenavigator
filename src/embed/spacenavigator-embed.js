@@ -4,8 +4,8 @@
  * Drop this script tag anywhere in your HTML:
  *
  *   <script
- *     src="https://your-host.com/spacenavigator-embed.js"
- *     data-src="https://your-host.com"
+ *     src="https://spacenavigator-ten.vercel.app/spacenavigator-embed.js"
+ *     data-src="https://spacenavigator-ten.vercel.app"
  *     data-mode="compact"
  *     data-width="100%"
  *     data-height="520px"
@@ -47,16 +47,14 @@
   const scripts    = document.querySelectorAll('script[data-src], script[data-mode]');
   const scriptEl   = document.currentScript || scripts[scripts.length - 1];
 
-  const dataSrc    = scriptEl?.getAttribute('data-src') || '';
+  const dataSrc    = scriptEl?.getAttribute('data-src') || 'https://spacenavigator-ten.vercel.app';
   const mode       = scriptEl?.getAttribute('data-mode')   || 'compact';
   const width      = scriptEl?.getAttribute('data-width')  || '100%';
   const height     = scriptEl?.getAttribute('data-height') || '520px';
   const radius     = scriptEl?.getAttribute('data-radius') || '10px';
   const targetSel  = scriptEl?.getAttribute('data-target') || null;
 
-  if (!dataSrc) {
-    console.warn('[SpaceNavigator] Missing data-src attribute. Add data-src="https://your-host.com" to the <script> tag.');
-  }
+  // dataSrc always has a fallback so this branch won't fire unless someone explicitly clears it
 
   // ── Build iframe URL ─────────────────────────────────────────────────────────
   const iframeUrl = (() => {
