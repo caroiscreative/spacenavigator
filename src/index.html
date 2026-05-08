@@ -73,16 +73,12 @@
     .hud-row {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;           /* multi-line on narrow screens */
       padding: 3px 10px;
       gap: 3px;
       min-height: 26px;
-      overflow-x: auto;
-      overflow-y: visible;
       position: relative;
-      /* hide scrollbar — users drag/scroll naturally */
-      scrollbar-width: none;
     }
-    .hud-row::-webkit-scrollbar { display: none; }
 
     /* Section label — tiny dim uppercase, not clickable */
     .hud-lbl {
@@ -398,19 +394,24 @@
       text-align: center;
     }
 
-    /* ── Active layer status dots ────────────────────────────────── */
+    /* ── Active layer status dots — fixed top-right badge ───────── */
     #hud-dots {
+      position: fixed;
+      top: 10px;
+      right: 14px;
+      z-index: var(--z-hud);
       display: flex;
       align-items: center;
       gap: 4px;
-      flex-shrink: 0;
+      pointer-events: none;
+      user-select: none;
     }
     .hud-dot-label {
-      font-size: 10px;
-      color: rgba(107,138,159,0.55);
-      letter-spacing: 0.12em;
+      font-size: 9px;
+      color: rgba(107,138,159,0.40);
+      letter-spacing: 0.14em;
       text-transform: uppercase;
-      padding-right: 2px;
+      padding-right: 3px;
     }
     .hud-dot {
       width: 6px;
@@ -494,67 +495,90 @@
     .hud-tip-combo strong { color: var(--cyan); font-weight: 400; }
 
     /* ── Onboarding overlay ────────────────────────────────────── */
+    /* ── Onboarding coach marks — non-blocking guided tour ──────── */
     #onboarding {
       position: fixed;
       inset: 0;
       z-index: var(--z-modal);
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      padding-bottom: 108px;
-      pointer-events: all;
+      pointer-events: none; /* screen stays fully interactive */
     }
     #onboarding.hidden { display: none; }
-    #ob-backdrop {
-      position: absolute;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.55);
-    }
-    #ob-card {
-      position: relative;
+
+    /* Spotlight ring — box-shadow creates the dim overlay with a cutout */
+    #ob-highlight {
+      position: fixed;
+      pointer-events: none;
+      border-radius: 5px;
+      border: 1.5px solid rgba(0, 212, 255, 0.80);
+      box-shadow:
+        0 0 0 9999px rgba(0, 0, 0, 0.50),
+        0 0 16px rgba(0, 212, 255, 0.35);
+      transition: left 0.35s cubic-bezier(.4,0,.2,1),
+                  top 0.35s cubic-bezier(.4,0,.2,1),
+                  width 0.35s cubic-bezier(.4,0,.2,1),
+                  height 0.35s cubic-bezier(.4,0,.2,1);
       z-index: 1;
-      background: rgba(4, 10, 24, 0.97);
-      border: 1px solid rgba(0, 212, 255, 0.30);
-      border-bottom: 1px solid rgba(0, 212, 255, 0.12);
-      padding: 22px 26px 18px;
-      max-width: 420px;
-      width: calc(100vw - 40px);
     }
+
+    /* Tooltip card — floats near the highlighted element */
+    #ob-card {
+      position: fixed;
+      pointer-events: all;
+      z-index: 2;
+      background: rgba(4, 10, 24, 0.98);
+      border: 1px solid rgba(0, 212, 255, 0.35);
+      padding: 14px 18px 12px;
+      width: 280px;
+      transition: left 0.35s cubic-bezier(.4,0,.2,1),
+                  top 0.35s cubic-bezier(.4,0,.2,1);
+    }
+    /* Arrow pointing down toward the highlighted element */
+    #ob-card::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 7px solid transparent;
+    }
+    #ob-card.arrow-down::after {
+      bottom: -14px;
+      border-top-color: rgba(0, 212, 255, 0.35);
+    }
+    #ob-card.arrow-up::after {
+      top: -14px;
+      border-bottom-color: rgba(0, 212, 255, 0.35);
+    }
+    #ob-card.arrow-none::after { display: none; }
+
     #ob-steps {
       display: flex;
-      gap: 6px;
-      margin-bottom: 14px;
+      gap: 5px;
+      margin-bottom: 10px;
     }
     .ob-dot {
-      width: 20px;
+      flex: 1;
       height: 2px;
-      background: rgba(0, 212, 255, 0.20);
+      background: rgba(0, 212, 255, 0.18);
       transition: background 0.25s;
     }
     .ob-dot.active { background: var(--cyan); }
-    #ob-eyebrow {
-      font-size: 12px;
-      letter-spacing: 0.18em;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      margin-bottom: 10px;
-      opacity: 0.85;
-      display: flex;
-      align-items: center;
-    }
+    .ob-dot.done   { background: rgba(0, 212, 255, 0.40); }
+
     #ob-title {
-      font-size: var(--text-md);
-      letter-spacing: 0.10em;
+      font-size: 11px;
+      letter-spacing: 0.12em;
       color: var(--white-cold);
       text-transform: uppercase;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
+      font-weight: 500;
     }
     #ob-body {
-      font-size: var(--text-sm);
+      font-size: 10px;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
       color: var(--text-secondary);
-      line-height: 1.6;
-      margin-bottom: 18px;
+      line-height: 1.65;
+      margin-bottom: 14px;
     }
     #ob-body strong { color: var(--cyan); font-weight: 400; }
     #ob-actions {
@@ -567,11 +591,11 @@
       border: none;
       color: var(--text-dim);
       font-family: var(--font);
-      font-size: var(--text-xs);
-      letter-spacing: 0.12em;
+      font-size: 10px;
+      letter-spacing: 0.10em;
       text-transform: uppercase;
       cursor: pointer;
-      padding: 4px 0;
+      padding: 3px 0;
     }
     #ob-skip:hover { color: var(--text-secondary); }
     #ob-next {
@@ -579,10 +603,10 @@
       border: 1px solid rgba(0, 212, 255, 0.40);
       color: var(--cyan);
       font-family: var(--font);
-      font-size: var(--text-xs);
-      letter-spacing: 0.15em;
+      font-size: 10px;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
-      padding: 5px 16px;
+      padding: 4px 14px;
       cursor: pointer;
       transition: background var(--t-fast), border-color var(--t-fast);
     }
@@ -4156,7 +4180,7 @@
     /* ── Hide the full controls row — too dense for a small embed ──────── */
     body[data-compact] #hud-row-ctrl { display: none !important; }
 
-    /* ── Hide misc elements in the nav row ─────────────────────────────── */
+    /* ── Hide misc elements in compact embed mode ───────────────────────── */
     body[data-compact] #hud-dots,
     body[data-compact] #btn-help,
     body[data-compact] #btn-about,
@@ -4170,11 +4194,15 @@
     body[data-compact] #btn-preset-stars,
     body[data-compact] #btn-preset-outer { display: none !important; }
 
-    /* ── Tighten HUD bar ─────────────────────────────────────────────────── */
+    /* ── Tighten HUD bar — compact embed: keep single line, scroll ──────── */
     body[data-compact] #hud .hud-row {
       padding: 4px 8px;
       gap: 4px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
     }
+    body[data-compact] #hud .hud-row::-webkit-scrollbar { display: none; }
 
     body[data-compact] .hud-btn {
       padding: 2px 6px;
@@ -4437,22 +4465,21 @@
 
       <button class="hud-btn" id="btn-help">Help</button>
       <button class="hud-btn" id="btn-about">About</button>
-      <span class="hud-sep">·</span>
-
-      <!-- Active layer dots -->
-      <div id="hud-dots">
-        <span class="hud-dot-label">Active</span>
-        <span class="hud-dot" id="dot-stars"  title="Stars"></span>
-        <span class="hud-dot" id="dot-sats"   title="Satellites"></span>
-        <span class="hud-dot" id="dot-debris" title="Debris"></span>
-        <span class="hud-dot" id="dot-risk"   title="Risk"></span>
-        <span class="hud-dot" id="dot-orbits" title="Orbit rings"></span>
-        <span class="hud-dot" id="dot-weather" title="Weather"></span>
-        <span class="hud-dot" id="dot-const"  title="Constellations"></span>
-        <span class="hud-dot" id="dot-belt"   title="Asteroids"></span>
-      </div>
 
     </div>
+  </div>
+
+  <!-- ── Active layer dots — fixed top-right corner ─────────────── -->
+  <div id="hud-dots">
+    <span class="hud-dot-label">Active</span>
+    <span class="hud-dot" id="dot-stars"  title="Stars"></span>
+    <span class="hud-dot" id="dot-sats"   title="Satellites"></span>
+    <span class="hud-dot" id="dot-debris" title="Debris"></span>
+    <span class="hud-dot" id="dot-risk"   title="Risk"></span>
+    <span class="hud-dot" id="dot-orbits" title="Orbit rings"></span>
+    <span class="hud-dot" id="dot-weather" title="Weather"></span>
+    <span class="hud-dot" id="dot-const"  title="Constellations"></span>
+    <span class="hud-dot" id="dot-belt"   title="Asteroids"></span>
   </div>
 
   
@@ -4983,26 +5010,13 @@
   </div>
 
   <div id="onboarding" class="hidden">
-    <div id="ob-backdrop"></div>
-    <div id="ob-card">
-      <div id="ob-steps">
-        <div class="ob-dot active"></div>
-        <div class="ob-dot"></div>
-        <div class="ob-dot"></div>
-        <div class="ob-dot"></div>
-      </div>
-      <div id="ob-eyebrow">
-        <svg width="14" height="14" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;margin-right:7px;opacity:0.85;">
-          <ellipse cx="24" cy="24" rx="17" ry="9.5" fill="none" stroke="#00D4FF" stroke-width="3" opacity="0.92" transform="rotate(-30, 24, 24)"/>
-          <circle cx="24" cy="24" r="4.5" fill="#00D4FF"/>
-          <circle cx="31.5" cy="11.5" r="4" fill="#FFD600"/>
-        </svg>
-        <span style="vertical-align:middle;"><span style="color:var(--cyan);">SPACE</span>NAVIGATOR</span>
-      </div>
+    <div id="ob-highlight"></div>
+    <div id="ob-card" class="arrow-none">
+      <div id="ob-steps"></div>
       <div id="ob-title"></div>
       <div id="ob-body"></div>
       <div id="ob-actions">
-        <button id="ob-skip">Skip intro</button>
+        <button id="ob-skip">Skip</button>
         <button id="ob-next">Continue →</button>
       </div>
     </div>

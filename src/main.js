@@ -2876,47 +2876,139 @@ const HUD_TIPS = {
 })();
 
 (function initOnboarding() {
-  const STORAGE_KEY = 'sn_onboarded_v1';
+  const STORAGE_KEY = 'sn_onboarded_v2';
 
-  const overlay  = document.getElementById('onboarding');
-  const titleEl  = document.getElementById('ob-title');
-  const bodyEl   = document.getElementById('ob-body');
-  const nextBtn  = document.getElementById('ob-next');
-  const skipBtn  = document.getElementById('ob-skip');
-  const dots     = document.querySelectorAll('.ob-dot');
+  const overlay   = document.getElementById('onboarding');
+  const highlight = document.getElementById('ob-highlight');
+  const card      = document.getElementById('ob-card');
+  const stepsEl   = document.getElementById('ob-steps');
+  const titleEl   = document.getElementById('ob-title');
+  const bodyEl    = document.getElementById('ob-body');
+  const nextBtn   = document.getElementById('ob-next');
+  const skipBtn   = document.getElementById('ob-skip');
   if (!overlay) return;
 
+  // ── Step definitions ────────────────────────────────────────────────────────
+  // target: CSS selector of element to highlight (null = no spotlight, center card)
+  // position: 'above' | 'below' | 'center'
   const STEPS = [
     {
-      title: 'You\'re seeing space in real time',
-      body:  'Every glowing dot is a real satellite or piece of debris tracked by the US Space Force right now — over <strong>27,000 objects</strong> orbiting Earth, propagated live using SGP4 orbital mechanics.',
+      target:   '#hud-row-nav',
+      position: 'below',
+      title:    'Fly anywhere in the solar system',
+      body:     'Click any planet or object in the top bar to fly there instantly. Try <strong>Earth</strong>, <strong>ISS</strong>, or <strong>Saturn</strong> right now — the camera will follow.',
     },
     {
-      title: 'Click any object to inspect it',
-      body:  'Click a satellite to see its name, orbit, altitude, and velocity. Use the planet buttons along the top to fly to any body in the solar system. Press <strong>E</strong> at any time to return to Earth.',
+      target:   null,
+      position: 'center',
+      title:    'Click any object to inspect it',
+      body:     'Every dot is a real satellite or debris tracked by the US Space Force — over <strong>27,000 objects</strong> live. Click one to see its name, orbit, altitude, and velocity.',
     },
     {
-      title: 'G reveals orbital risk',
-      body:  'Press <strong>G</strong> to activate the conjunction risk scanner. It continuously checks all tracked objects for close approaches. Click any event to fly to it and inspect the encounter.',
+      target:   '#btn-risk',
+      position: 'above',
+      title:    'Scan for orbital risk',
+      body:     'This button activates the conjunction scanner. It finds close approaches between tracked objects and flags collision risk. Click any event to fly to the encounter.',
     },
     {
-      title: 'X lets you travel through time',
-      body:  'Press <strong>X</strong> to open the time controls and scrub ±7 days. Use <strong>[</strong> and <strong>]</strong> to slow or speed up to ×1,000,000. Press <strong>?</strong> any time to see the full controls guide.',
+      target:   '#btn-search',
+      position: 'above',
+      title:    'Search by name or NORAD ID',
+      body:     'Find any satellite or object by name — ISS, Hubble, Starlink, debris IDs. Press <strong>/</strong> as a shortcut. Press <strong>?</strong> anytime to see all controls.',
     },
   ];
 
   let step = 0;
 
+  // ── Build progress dots ──────────────────────────────────────────────────────
+  function buildDots() {
+    stepsEl.innerHTML = '';
+    STEPS.forEach((_, i) => {
+      const d = document.createElement('div');
+      d.className = 'ob-dot';
+      stepsEl.appendChild(d);
+    });
+  }
+
+  // ── Position card near a target element ─────────────────────────────────────
+  function positionCard(targetSel, position) {
+    const PAD = 14; // gap between highlight border and card
+    const MARGIN = 12; // min distance from viewport edges
+
+    if (!targetSel || position === 'center') {
+      // No spotlight — center card, hide highlight
+      highlight.style.display = 'none';
+      card.className = 'arrow-none';
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      card.style.left = Math.round((vw - 280) / 2) + 'px';
+      card.style.top  = Math.round(vh * 0.42) + 'px';
+      return;
+    }
+
+    const el = document.querySelector(targetSel);
+    if (!el) {
+      highlight.style.display = 'none';
+      card.className = 'arrow-none';
+      card.style.left = '50%';
+      card.style.top  = '50%';
+      return;
+    }
+
+    const r = el.getBoundingClientRect();
+
+    // Position spotlight ring
+    highlight.style.display = 'block';
+    highlight.style.left   = r.left + 'px';
+    highlight.style.top    = r.top + 'px';
+    highlight.style.width  = r.width + 'px';
+    highlight.style.height = r.height + 'px';
+
+    // Measure card width (known: 280px) — estimate height conservatively
+    const cardW = 280;
+    const cardH = 160; // safe estimate
+
+    let cardLeft, cardTop;
+
+    if (position === 'below') {
+      // Card appears below the target, arrow points up
+      card.className = 'arrow-up';
+      cardTop  = r.bottom + PAD;
+      cardLeft = r.left + r.width / 2 - cardW / 2;
+    } else {
+      // position === 'above' — card appears above, arrow points down
+      card.className = 'arrow-down';
+      cardTop  = r.top - cardH - PAD;
+      cardLeft = r.left + r.width / 2 - cardW / 2;
+    }
+
+    // Clamp to viewport
+    cardLeft = Math.max(MARGIN, Math.min(cardLeft, window.innerWidth - cardW - MARGIN));
+    cardTop  = Math.max(MARGIN, Math.min(cardTop, window.innerHeight - cardH - MARGIN));
+
+    card.style.left = cardLeft + 'px';
+    card.style.top  = cardTop  + 'px';
+  }
+
+  // ── Render a step ────────────────────────────────────────────────────────────
   function renderStep(i) {
-    dots.forEach((d, idx) => d.classList.toggle('active', idx === i));
-    titleEl.textContent = STEPS[i].title;
-    bodyEl.innerHTML    = STEPS[i].body;
+    const s = STEPS[i];
+    // Update dots
+    const dots = stepsEl.querySelectorAll('.ob-dot');
+    dots.forEach((d, idx) => {
+      d.classList.toggle('active', idx === i);
+      d.classList.toggle('done',   idx < i);
+    });
+    titleEl.textContent = s.title;
+    bodyEl.innerHTML    = s.body;
     nextBtn.textContent = i === STEPS.length - 1 ? 'Get started →' : 'Continue →';
+    positionCard(s.target, s.position);
   }
 
   function dismiss() {
     localStorage.setItem(STORAGE_KEY, '1');
     overlay.classList.add('hidden');
+    highlight.style.display = 'none';
   }
 
   nextBtn?.addEventListener('click', () => {
@@ -2926,14 +3018,21 @@ const HUD_TIPS = {
 
   skipBtn?.addEventListener('click', dismiss);
 
+  // Reposition on resize
+  window.addEventListener('resize', () => {
+    if (!overlay.classList.contains('hidden')) renderStep(step);
+  });
+
   window._snReplayOnboarding = function() {
     step = 0;
+    buildDots();
     renderStep(0);
     overlay.classList.remove('hidden');
   };
 
   if (!localStorage.getItem(STORAGE_KEY)) {
     setTimeout(() => {
+      buildDots();
       renderStep(0);
       overlay.classList.remove('hidden');
     }, 1800);
